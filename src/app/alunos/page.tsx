@@ -34,7 +34,8 @@ import { PageHeader } from '@/components/page-header';
 import { Header } from '@/components/header';
 import type { Aluno, Escola, Turma } from '@/lib/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc } from 'firebase/firestore';
 import {
   Select,
   SelectContent,
@@ -42,11 +43,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
 
 export default function AlunosPage() {
   const firestore = useFirestore();
-  const { toast } = useToast();
   
   const alunosCollection = useMemoFirebase(() => collection(firestore, 'alunos'), [firestore]);
   const { data: alunos, isLoading } = useCollection<Aluno>(alunosCollection);
@@ -69,12 +68,8 @@ export default function AlunosPage() {
   };
 
   const handleDelete = (id: string) => {
-    // Ação desativada para contornar erro de permissão.
-    toast({
-      variant: 'destructive',
-      title: 'Função Desativada',
-      description: 'A exclusão está temporariamente desativada devido a problemas de permissão.',
-    });
+    const docRef = doc(firestore, 'alunos', id);
+    deleteDocumentNonBlocking(docRef);
   };
   
   const handleOpenDialog = () => {
@@ -84,14 +79,22 @@ export default function AlunosPage() {
 
   const handleSave = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // Ação desativada para contornar erro de permissão.
+    const formData = new FormData(event.currentTarget);
+    const newAlunoData = {
+      nome: formData.get('nome') as string,
+      dataNascimento: formData.get('dataNascimento') as string,
+      escolaId: formData.get('escolaId') as string,
+      turmaId: formData.get('turmaId') as string,
+    };
+
+    if (editingAluno) {
+      const docRef = doc(firestore, 'alunos', editingAluno.id);
+      setDocumentNonBlocking(docRef, newAlunoData, { merge: true });
+    } else {
+      addDocumentNonBlocking(alunosCollection, newAlunoData);
+    }
     setIsDialogOpen(false);
     setEditingAluno(null);
-    toast({
-      variant: 'destructive',
-      title: 'Função Desativada',
-      description: 'A criação/edição está temporariamente desativada devido a problemas de permissão.',
-    });
   };
 
   return (

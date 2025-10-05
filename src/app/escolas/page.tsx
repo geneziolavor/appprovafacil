@@ -34,12 +34,11 @@ import { PageHeader } from '@/components/page-header';
 import { Header } from '@/components/header';
 import type { Escola } from '@/lib/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc } from 'firebase/firestore';
 
 export default function EscolasPage() {
   const firestore = useFirestore();
-  const { toast } = useToast();
   
   const escolasCollection = useMemoFirebase(() => collection(firestore, 'escolas'), [firestore]);
   const { data: escolas, isLoading } = useCollection<Escola>(escolasCollection);
@@ -53,12 +52,8 @@ export default function EscolasPage() {
   };
 
   const handleDelete = (id: string) => {
-    // Ação desativada para contornar erro de permissão.
-     toast({
-      variant: 'destructive',
-      title: 'Função Desativada',
-      description: 'A exclusão está temporariamente desativada devido a problemas de permissão.',
-    });
+    const docRef = doc(firestore, 'escolas', id);
+    deleteDocumentNonBlocking(docRef);
   };
 
   const handleOpenDialog = () => {
@@ -68,14 +63,20 @@ export default function EscolasPage() {
 
   const handleSave = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // Ação desativada para contornar erro de permissão.
+    const formData = new FormData(event.currentTarget);
+    const newEscolaData = {
+      nome: formData.get('nome') as string,
+      endereco: formData.get('endereco') as string,
+    };
+
+    if (editingEscola) {
+      const docRef = doc(firestore, 'escolas', editingEscola.id);
+      setDocumentNonBlocking(docRef, newEscolaData, { merge: true });
+    } else {
+      addDocumentNonBlocking(escolasCollection, newEscolaData);
+    }
     setIsDialogOpen(false);
     setEditingEscola(null);
-    toast({
-      variant: 'destructive',
-      title: 'Função Desativada',
-      description: 'A criação/edição está temporariamente desativada devido a problemas de permissão.',
-    });
   };
 
   return (

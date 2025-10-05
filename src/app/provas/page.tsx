@@ -41,7 +41,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc } from 'firebase/firestore';
 import {
   Select,
   SelectContent,
@@ -49,11 +50,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
 
 export default function ProvasPage() {
   const firestore = useFirestore();
-  const { toast } = useToast();
 
   const provasCollection = useMemoFirebase(() => collection(firestore, 'provas'), [firestore]);
   const { data: provas, isLoading } = useCollection<Prova>(provasCollection);
@@ -72,12 +71,8 @@ export default function ProvasPage() {
   };
 
   const handleDelete = (id: string) => {
-    // Ação desativada para contornar erro de permissão.
-     toast({
-      variant: 'destructive',
-      title: 'Função Desativada',
-      description: 'A exclusão está temporariamente desativada devido a problemas de permissão.',
-    });
+    const docRef = doc(firestore, 'provas', id);
+    deleteDocumentNonBlocking(docRef);
   };
 
   const handleOpenDialog = () => {
@@ -87,14 +82,21 @@ export default function ProvasPage() {
 
   const handleSave = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-     // Ação desativada para contornar erro de permissão.
+    const formData = new FormData(event.currentTarget);
+    const newProvaData = {
+      titulo: formData.get('titulo') as string,
+      dataAplicacao: formData.get('dataAplicacao') as string,
+      turmaId: formData.get('turmaId') as string,
+    };
+
+    if (editingProva) {
+      const docRef = doc(firestore, 'provas', editingProva.id);
+      setDocumentNonBlocking(docRef, newProvaData, { merge: true });
+    } else {
+      addDocumentNonBlocking(provasCollection, newProvaData);
+    }
     setIsDialogOpen(false);
     setEditingProva(null);
-    toast({
-      variant: 'destructive',
-      title: 'Função Desativada',
-      description: 'A criação/edição está temporariamente desativada devido a problemas de permissão.',
-    });
   };
 
   return (
