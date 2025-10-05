@@ -11,9 +11,8 @@ import { useCollection, useDoc, useFirestore, useMemoFirebase } from "@/firebase
 import { collection, doc, query, where } from "firebase/firestore";
 import type { Aluno, Prova, Resultado } from "@/lib/types";
 
-export default function ResultadosPage({ params }: { params: { id: string } }) {
+export default function ResultadosPage({ params: { id: provaId } }: { params: { id: string } }) {
   const firestore = useFirestore();
-  const provaId = params.id;
   
   // Carrega a prova
   const provaDocRef = useMemoFirebase(() => doc(firestore, 'provas', provaId), [firestore, provaId]);

@@ -14,11 +14,11 @@ import { useToast } from '@/hooks/use-toast';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { CheckCircle, XCircle } from 'lucide-react';
 
-export default function CorrigirRapidoPage({ params }: { params: { id: string } }) {
+export default function CorrigirRapidoPage({ params: { id: provaId } }: { params: { id: string } }) {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const provaRef = doc(firestore, 'provas', params.id);
+  const provaRef = doc(firestore, 'provas', provaId);
   const { data: prova } = useDoc<Prova>(provaRef);
 
   const [alunos, setAlunos] = useState<Aluno[]>([]);
@@ -68,14 +68,14 @@ export default function CorrigirRapidoPage({ params }: { params: { id: string } 
 
     const resultadoData: Omit<Resultado, 'id'> = {
         alunoId: selectedAlunoId,
-        provaId: params.id,
+        provaId: provaId,
         acertos: acertos,
         erros: erros,
         media: media,
         respostas: respostas
     };
     
-    const resultadoId = `${params.id}_${selectedAlunoId}`;
+    const resultadoId = `${provaId}_${selectedAlunoId}`;
     const resultadoRef = doc(firestore, 'resultados', resultadoId);
 
     await setDocumentNonBlocking(resultadoRef, resultadoData);
