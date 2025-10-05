@@ -1,5 +1,8 @@
 'use client';
+'use client';
 
+import { useMemoFirebase, useCollection, useDoc, useFirestore } from "@/firebase";
+import { useParams } from 'next/navigation';
 import { Header } from "@/components/header";
 import { PageHeader } from "@/components/page-header";
 import { BarChart2, CheckCircle2, XCircle } from "lucide-react";
@@ -7,20 +10,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ResultsChart } from "@/components/results-chart";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { useCollection, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, doc, query, where } from "firebase/firestore";
 import type { Aluno, Prova, Resultado } from "@/lib/types";
 
-export default function ResultadosPage({ params: { id: provaId } }: { params: { id: string } }) {
+export default function ResultadosPage() {
   const firestore = useFirestore();
+  const params = useParams();
+  const provaId = params.id as string;
   
   // Carrega a prova
   const provaDocRef = useMemoFirebase(() => doc(firestore, 'provas', provaId), [firestore, provaId]);
   const { data: prova, isLoading: isProvaLoading } = useDoc<Prova>(provaDocRef);
 
   // Carrega os resultados da prova
-  const resultadosCollectionRef = useMemoFirebase(() => collection(firestore, 'resultados'), [firestore]);
-  const resultadosQuery = useMemoFirebase(() => query(resultadosCollectionRef, where('provaId', '==', provaId)), [resultadosCollectionRef, provaId]);
+  const resultadosQuery = useMemoFirebase(() => query(collection(firestore, 'resultados'), where('provaId', '==', provaId)), [firestore, provaId]);
   const { data: resultados, isLoading: areResultadosLoading } = useCollection<Resultado>(resultadosQuery);
   
   // Carrega todos os alunos para mapear o ID para o nome

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useFirestore, useDoc, useCollection } from '@/firebase';
+import { useParams } from 'next/navigation';
+import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { Prova, Aluno, Resultado } from '@/lib/types';
 import { Header } from '@/components/header';
@@ -14,11 +15,13 @@ import { useToast } from '@/hooks/use-toast';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { CheckCircle, XCircle } from 'lucide-react';
 
-export default function CorrigirRapidoPage({ params: { id: provaId } }: { params: { id: string } }) {
+export default function CorrigirRapidoPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const params = useParams();
+  const provaId = params.id as string;
 
-  const provaRef = doc(firestore, 'provas', provaId);
+  const provaRef = useMemoFirebase(() => doc(firestore, 'provas', provaId), [firestore, provaId]);
   const { data: prova } = useDoc<Prova>(provaRef);
 
   const [alunos, setAlunos] = useState<Aluno[]>([]);
@@ -26,7 +29,7 @@ export default function CorrigirRapidoPage({ params: { id: provaId } }: { params
   const [respostas, setRespostas] = useState<Record<string, string>>({});
   const [resultadoFinal, setResultadoFinal] = useState<{ acertos: number; erros: number; media: number; respostasSalvas: Record<string, string> } | null>(null);
 
-  const alunosCollection = collection(firestore, 'alunos');
+  const alunosCollection = useMemoFirebase(() => collection(firestore, 'alunos'), [firestore]);
   const { data: alunosData } = useCollection<Aluno>(alunosCollection);
 
   useEffect(() => {
