@@ -42,6 +42,13 @@ import {
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function ProvasPage() {
   const firestore = useFirestore();
@@ -77,7 +84,7 @@ export default function ProvasPage() {
     const newProvaData = {
       titulo: formData.get('titulo') as string,
       dataAplicacao: formData.get('dataAplicacao') as string,
-      turmaId: '1', // Mock
+      turmaId: formData.get('turmaId') as string,
     };
 
     if (editingProva) {
@@ -121,6 +128,21 @@ export default function ProvasPage() {
                       Data
                     </Label>
                     <Input id="dataAplicacao" name="dataAplicacao" type="date" defaultValue={editingProva?.dataAplicacao} className="col-span-3" required />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="turmaId" className="text-right">
+                      Turma
+                    </Label>
+                    <Select name="turmaId" defaultValue={editingProva?.turmaId}>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Selecione uma turma" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {turmas?.map(turma => (
+                          <SelectItem key={turma.id} value={turma.id}>{turma.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <DialogFooter>

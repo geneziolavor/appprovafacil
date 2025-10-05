@@ -35,6 +35,13 @@ import type { Turma, Escola } from '@/lib/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection, doc } from 'firebase/firestore';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function TurmasPage() {
   const firestore = useFirestore();
@@ -70,7 +77,7 @@ export default function TurmasPage() {
     const newTurmaData = {
       nome: formData.get('nome') as string,
       ano: Number(formData.get('ano')),
-      escolaId: '1', // Mock
+      escolaId: formData.get('escolaId') as string,
     };
 
     if (editingTurma) {
@@ -114,6 +121,21 @@ export default function TurmasPage() {
                       Ano
                     </Label>
                     <Input id="ano" name="ano" type="number" defaultValue={editingTurma?.ano} className="col-span-3" required />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="escolaId" className="text-right">
+                      Escola
+                    </Label>
+                    <Select name="escolaId" defaultValue={editingTurma?.escolaId}>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Selecione uma escola" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {escolas?.map(escola => (
+                          <SelectItem key={escola.id} value={escola.id}>{escola.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <DialogFooter>

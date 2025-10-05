@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Plus, Pencil, Trash2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,6 +35,13 @@ import type { Aluno, Escola, Turma } from '@/lib/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection, doc } from 'firebase/firestore';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function AlunosPage() {
   const firestore = useFirestore();
@@ -74,8 +81,8 @@ export default function AlunosPage() {
     const newAlunoData = {
       nome: formData.get('nome') as string,
       dataNascimento: formData.get('dataNascimento') as string,
-      escolaId: '1', // Mock
-      turmaId: '1', // Mock
+      escolaId: formData.get('escolaId') as string,
+      turmaId: formData.get('turmaId') as string,
     };
 
     if (editingAluno) {
@@ -119,6 +126,36 @@ export default function AlunosPage() {
                       Data Nasc.
                     </Label>
                     <Input id="dataNascimento" name="dataNascimento" type="date" defaultValue={editingAluno?.dataNascimento} className="col-span-3" required />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="escolaId" className="text-right">
+                      Escola
+                    </Label>
+                    <Select name="escolaId" defaultValue={editingAluno?.escolaId}>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Selecione uma escola" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {escolas?.map(escola => (
+                          <SelectItem key={escola.id} value={escola.id}>{escola.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="turmaId" className="text-right">
+                      Turma
+                    </Label>
+                     <Select name="turmaId" defaultValue={editingAluno?.turmaId}>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Selecione uma turma" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {turmas?.map(turma => (
+                          <SelectItem key={turma.id} value={turma.id}>{turma.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <DialogFooter>
