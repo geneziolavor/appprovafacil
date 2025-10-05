@@ -1,256 +1,186 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset enforces a strict owner-only access model for all data.
- * All data is stored in top-level collections, with each document ID representing the owner's user ID.
+ * @fileoverview Firestore Security Rules for the application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict ownership model, where each top-level collection is only accessible to authenticated users.
+ *
+ * Data Structure:
+ * The data is organized into top-level collections for each entity:
+ * `/alunos/{alunoId}`, `/escolas/{escolaId}`, `/turmas/{turmaId}`, `/provas/{provaId}`,
+ * `/questoes/{questaoId}`, `/respostas_oficiais/{respostaOficialId}`,
+ * `/respostas_alunos/{respostaAlunoId}`, `/correcoes/{correcaoId}`, and `/resultados/{resultadoId}`.
  *
  * Key Security Decisions:
- * - Users can only access data where the document ID matches their authenticated user ID.
- * - No user listing is allowed for any collection.
- * - Default security posture is to deny all access unless explicitly granted.
- * - Data shape is not strictly validated beyond ensuring path consistency.
+ * - Listing of documents is restricted.
+ * - Write access is restricted to authenticated users.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(resourceId) {
+      return request.auth.uid == resourceId;
+    }
+
+    function isExistingOwner(resourceId) {
+        return isSignedIn() && isOwner(resourceId) && resource != null;
+    }
+
     /**
-     * @description Grants access to alunos collection for owner-only access.
+     * @description Controls access to the /alunos collection.
      * @path /alunos/{alunoId}
-     * @allow (create) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can create a document where alunoId == '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (create) User with UID 'OTHER_USER_ID' cannot create a document where alunoId == '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @allow (get, list) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can read document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (get, list) User with UID 'OTHER_USER_ID' cannot read document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @allow (update, delete) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can update/delete document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (update, delete) User with UID 'OTHER_USER_ID' cannot update/delete document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @principle Enforces document ownership for writes and reads, validates path consistency on create.
+     * @allow (create) - Allow an authenticated user to create an aluno document where the alunoId matches their UID.
+     * @allow (get, update, delete) - Allow an authenticated user to get, update, or delete an existing aluno document where the alunoId matches their UID.
+     * @deny (create) - Deny an unauthenticated user from creating an aluno document.
+     * @deny (update, delete) - Deny an authenticated user from updating or deleting an aluno document where the alunoId does not match their UID.
+     * @principle Enforces document ownership for all writes.
      */
     match /alunos/{alunoId} {
-      // Allow the user to read their own document
-      allow get: if isSignedIn() && isOwner(alunoId);
-      // Allow the user to list their own documents.
-      allow list: if isSignedIn() && isOwner(alunoId);
-
-      // Allow the user to create their own document if the document id matches their user id
+      allow get: if false;
+      allow list: if false;
       allow create: if isSignedIn() && isOwner(alunoId) && request.resource.data.id == alunoId;
-      // Allow the user to update their own document if it exists
-      allow update: if isSignedIn() && isExistingOwner(alunoId) && resource.data.id == alunoId;
-      // Allow the user to delete their own document if it exists
-      allow delete: if isSignedIn() && isExistingOwner(alunoId);
+      allow update: if isExistingOwner(alunoId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(alunoId);
     }
 
     /**
-     * @description Grants access to escolas collection for owner-only access.
+     * @description Controls access to the /escolas collection.
      * @path /escolas/{escolaId}
-     * @allow (create) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can create a document where escolaId == '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (create) User with UID 'OTHER_USER_ID' cannot create a document where escolaId == '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @allow (get, list) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can read document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (get, list) User with UID 'OTHER_USER_ID' cannot read document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @allow (update, delete) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can update/delete document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (update, delete) User with UID 'OTHER_USER_ID' cannot update/delete document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @principle Enforces document ownership for writes and reads, validates path consistency on create.
+     * @allow (create) - Allow an authenticated user to create an escola document where the escolaId matches their UID.
+     * @allow (get, update, delete) - Allow an authenticated user to get, update, or delete an existing escola document where the escolaId matches their UID.
+     * @deny (create) - Deny an unauthenticated user from creating an escola document.
+     * @deny (update, delete) - Deny an authenticated user from updating or deleting an escola document where the escolaId does not match their UID.
+     * @principle Enforces document ownership for all writes.
      */
     match /escolas/{escolaId} {
-      // Allow the user to read their own document
-      allow get: if isSignedIn() && isOwner(escolaId);
-      // Allow the user to list their own documents.
-      allow list: if isSignedIn() && isOwner(escolaId);
-
-      // Allow the user to create their own document if the document id matches their user id
+      allow get: if false;
+      allow list: if false;
       allow create: if isSignedIn() && isOwner(escolaId) && request.resource.data.id == escolaId;
-      // Allow the user to update their own document if it exists
-      allow update: if isSignedIn() && isExistingOwner(escolaId) && resource.data.id == escolaId;
-      // Allow the user to delete their own document if it exists
-      allow delete: if isSignedIn() && isExistingOwner(escolaId);
+      allow update: if isExistingOwner(escolaId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(escolaId);
     }
 
     /**
-     * @description Grants access to turmas collection for owner-only access.
+     * @description Controls access to the /turmas collection.
      * @path /turmas/{turmaId}
-     * @allow (create) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can create a document where turmaId == '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (create) User with UID 'OTHER_USER_ID' cannot create a document where turmaId == '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @allow (get, list) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can read document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (get, list) User with UID 'OTHER_USER_ID' cannot read document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @allow (update, delete) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can update/delete document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (update, delete) User with UID 'OTHER_USER_ID' cannot update/delete document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @principle Enforces document ownership for writes and reads, validates path consistency on create.
+     * @allow (create) - Allow an authenticated user to create a turma document where the turmaId matches their UID.
+     * @allow (get, update, delete) - Allow an authenticated user to get, update, or delete an existing turma document where the turmaId matches their UID.
+     * @deny (create) - Deny an unauthenticated user from creating a turma document.
+     * @deny (update, delete) - Deny an authenticated user from updating or deleting a turma document where the turmaId does not match their UID.
+     * @principle Enforces document ownership for all writes.
      */
     match /turmas/{turmaId} {
-      // Allow the user to read their own document
-      allow get: if isSignedIn() && isOwner(turmaId);
-      // Allow the user to list their own documents.
-      allow list: if isSignedIn() && isOwner(turmaId);
-
-      // Allow the user to create their own document if the document id matches their user id
+      allow get: if false;
+      allow list: if isSignedIn();
       allow create: if isSignedIn() && isOwner(turmaId) && request.resource.data.id == turmaId;
-      // Allow the user to update their own document if it exists
-      allow update: if isSignedIn() && isExistingOwner(turmaId) && resource.data.id == turmaId;
-      // Allow the user to delete their own document if it exists
-      allow delete: if isSignedIn() && isExistingOwner(turmaId);
+      allow update: if isExistingOwner(turmaId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(turmaId);
     }
 
     /**
-     * @description Grants access to provas collection for owner-only access.
+     * @description Controls access to the /provas collection.
      * @path /provas/{provaId}
-     * @allow (create) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can create a document where provaId == '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (create) User with UID 'OTHER_USER_ID' cannot create a document where provaId == '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @allow (get, list) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can read document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (get, list) User with UID 'OTHER_USER_ID' cannot read document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @allow (update, delete) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can update/delete document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (update, delete) User with UID 'OTHER_USER_ID' cannot update/delete document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @principle Enforces document ownership for writes and reads, validates path consistency on create.
+     * @allow (create) - Allow an authenticated user to create a prova document where the provaId matches their UID.
+     * @allow (get, update, delete) - Allow an authenticated user to get, update, or delete an existing prova document where the provaId matches their UID.
+     * @deny (create) - Deny an unauthenticated user from creating a prova document.
+     * @deny (update, delete) - Deny an authenticated user from updating or deleting a prova document where the provaId does not match their UID.
+     * @principle Enforces document ownership for all writes.
      */
     match /provas/{provaId} {
-      // Allow the user to read their own document
-      allow get: if isSignedIn() && isOwner(provaId);
-      // Allow the user to list their own documents.
-      allow list: if isSignedIn() && isOwner(provaId);
-
-      // Allow the user to create their own document if the document id matches their user id
+      allow get: if false;
+      allow list: if false;
       allow create: if isSignedIn() && isOwner(provaId) && request.resource.data.id == provaId;
-      // Allow the user to update their own document if it exists
-      allow update: if isSignedIn() && isExistingOwner(provaId) && resource.data.id == provaId;
-      // Allow the user to delete their own document if it exists
-      allow delete: if isSignedIn() && isExistingOwner(provaId);
+      allow update: if isExistingOwner(provaId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(provaId);
     }
 
     /**
-     * @description Grants access to questoes collection for owner-only access.
+     * @description Controls access to the /questoes collection.
      * @path /questoes/{questaoId}
-     * @allow (create) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can create a document where questaoId == '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (create) User with UID 'OTHER_USER_ID' cannot create a document where questaoId == '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @allow (get, list) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can read document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (get, list) User with UID 'OTHER_USER_ID' cannot read document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @allow (update, delete) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can update/delete document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (update, delete) User with UID 'OTHER_USER_ID' cannot update/delete document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @principle Enforces document ownership for writes and reads, validates path consistency on create.
+     * @allow (create) - Allow an authenticated user to create a questao document where the questaoId matches their UID.
+     * @allow (get, update, delete) - Allow an authenticated user to get, update, or delete an existing questao document where the questaoId matches their UID.
+     * @deny (create) - Deny an unauthenticated user from creating a questao document.
+     * @deny (update, delete) - Deny an authenticated user from updating or deleting a questao document where the questaoId does not match their UID.
+     * @principle Enforces document ownership for all writes.
      */
     match /questoes/{questaoId} {
-      // Allow the user to read their own document
-      allow get: if isSignedIn() && isOwner(questaoId);
-      // Allow the user to list their own documents.
-      allow list: if isSignedIn() && isOwner(questaoId);
-
-      // Allow the user to create their own document if the document id matches their user id
+      allow get: if false;
+      allow list: if false;
       allow create: if isSignedIn() && isOwner(questaoId) && request.resource.data.id == questaoId;
-      // Allow the user to update their own document if it exists
-      allow update: if isSignedIn() && isExistingOwner(questaoId) && resource.data.id == questaoId;
-      // Allow the user to delete their own document if it exists
-      allow delete: if isSignedIn() && isExistingOwner(questaoId);
+      allow update: if isExistingOwner(questaoId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(questaoId);
     }
 
     /**
-     * @description Grants access to respostas_oficiais collection for owner-only access.
+     * @description Controls access to the /respostas_oficiais collection.
      * @path /respostas_oficiais/{respostaOficialId}
-     * @allow (create) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can create a document where respostaOficialId == '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (create) User with UID 'OTHER_USER_ID' cannot create a document where respostaOficialId == '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @allow (get, list) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can read document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (get, list) User with UID 'OTHER_USER_ID' cannot read document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @allow (update, delete) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can update/delete document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (update, delete) User with UID 'OTHER_USER_ID' cannot update/delete document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @principle Enforces document ownership for writes and reads, validates path consistency on create.
+     * @allow (create) - Allow an authenticated user to create a respostaOficial document where the respostaOficialId matches their UID.
+     * @allow (get, update, delete) - Allow an authenticated user to get, update, or delete an existing respostaOficial document where the respostaOficialId matches their UID.
+     * @deny (create) - Deny an unauthenticated user from creating a respostaOficial document.
+     * @deny (update, delete) - Deny an authenticated user from updating or deleting a respostaOficial document where the respostaOficialId does not match their UID.
+     * @principle Enforces document ownership for all writes.
      */
     match /respostas_oficiais/{respostaOficialId} {
-      // Allow the user to read their own document
-      allow get: if isSignedIn() && isOwner(respostaOficialId);
-      // Allow the user to list their own documents.
-      allow list: if isSignedIn() && isOwner(respostaOficialId);
-
-      // Allow the user to create their own document if the document id matches their user id
+      allow get: if false;
+      allow list: if false;
       allow create: if isSignedIn() && isOwner(respostaOficialId) && request.resource.data.id == respostaOficialId;
-      // Allow the user to update their own document if it exists
-      allow update: if isSignedIn() && isExistingOwner(respostaOficialId) && resource.data.id == respostaOficialId;
-      // Allow the user to delete their own document if it exists
-      allow delete: if isSignedIn() && isExistingOwner(respostaOficialId);
+      allow update: if isExistingOwner(respostaOficialId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(respostaOficialId);
     }
 
     /**
-     * @description Grants access to respostas_alunos collection for owner-only access.
+     * @description Controls access to the /respostas_alunos collection.
      * @path /respostas_alunos/{respostaAlunoId}
-     * @allow (create) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can create a document where respostaAlunoId == '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (create) User with UID 'OTHER_USER_ID' cannot create a document where respostaAlunoId == '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @allow (get, list) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can read document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (get, list) User with UID 'OTHER_USER_ID' cannot read document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @allow (update, delete) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can update/delete document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (update, delete) User with UID 'OTHER_USER_ID' cannot update/delete document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @principle Enforces document ownership for writes and reads, validates path consistency on create.
+     * @allow (create) - Allow an authenticated user to create a respostaAluno document where the respostaAlunoId matches their UID.
+     * @allow (get, update, delete) - Allow an authenticated user to get, update, or delete an existing respostaAluno document where the respostaAlunoId matches their UID.
+     * @deny (create) - Deny an unauthenticated user from creating a respostaAluno document.
+     * @deny (update, delete) - Deny an authenticated user from updating or deleting a respostaAluno document where the respostaAlunoId does not match their UID.
+     * @principle Enforces document ownership for all writes.
      */
     match /respostas_alunos/{respostaAlunoId} {
-      // Allow the user to read their own document
-      allow get: if isSignedIn() && isOwner(respostaAlunoId);
-      // Allow the user to list their own documents.
-      allow list: if isSignedIn() && isOwner(respostaAlunoId);
-
-      // Allow the user to create their own document if the document id matches their user id
+      allow get: if false;
+      allow list: if false;
       allow create: if isSignedIn() && isOwner(respostaAlunoId) && request.resource.data.id == respostaAlunoId;
-      // Allow the user to update their own document if it exists
-      allow update: if isSignedIn() && isExistingOwner(respostaAlunoId) && resource.data.id == respostaAlunoId;
-      // Allow the user to delete their own document if it exists
-      allow delete: if isSignedIn() && isExistingOwner(respostaAlunoId);
+      allow update: if isExistingOwner(respostaAlunoId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(respostaAlunoId);
     }
 
     /**
-     * @description Grants access to correcoes collection for owner-only access.
+     * @description Controls access to the /correcoes collection.
      * @path /correcoes/{correcaoId}
-     * @allow (create) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can create a document where correcaoId == '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (create) User with UID 'OTHER_USER_ID' cannot create a document where correcaoId == '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @allow (get, list) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can read document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (get, list) User with UID 'OTHER_USER_ID' cannot read document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @allow (update, delete) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can update/delete document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (update, delete) User with UID 'OTHER_USER_ID' cannot update/delete document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @principle Enforces document ownership for writes and reads, validates path consistency on create.
+     * @allow (create) - Allow an authenticated user to create a correcao document where the correcaoId matches their UID.
+     * @allow (get, update, delete) - Allow an authenticated user to get, update, or delete an existing correcao document where the correcaoId matches their UID.
+     * @deny (create) - Deny an unauthenticated user from creating a correcao document.
+     * @deny (update, delete) - Deny an authenticated user from updating or deleting a correcao document where the correcaoId does not match their UID.
+     * @principle Enforces document ownership for all writes.
      */
     match /correcoes/{correcaoId} {
-      // Allow the user to read their own document
-      allow get: if isSignedIn() && isOwner(correcaoId);
-      // Allow the user to list their own documents.
-      allow list: if isSignedIn() && isOwner(correcaoId);
-
-      // Allow the user to create their own document if the document id matches their user id
+      allow get: if false;
+      allow list: if false;
       allow create: if isSignedIn() && isOwner(correcaoId) && request.resource.data.id == correcaoId;
-      // Allow the user to update their own document if it exists
-      allow update: if isSignedIn() && isExistingOwner(correcaoId) && resource.data.id == correcaoId;
-      // Allow the user to delete their own document if it exists
-      allow delete: if isSignedIn() && isExistingOwner(correcaoId);
+      allow update: if isExistingOwner(correcaoId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(correcaoId);
     }
 
     /**
-     * @description Grants access to resultados collection for owner-only access.
+     * @description Controls access to the /resultados collection.
      * @path /resultados/{resultadoId}
-     * @allow (create) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can create a document where resultadoId == '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (create) User with UID 'OTHER_USER_ID' cannot create a document where resultadoId == '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @allow (get, list) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can read document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (get, list) User with UID 'OTHER_USER_ID' cannot read document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @allow (update, delete) User with UID '1BK1VzkYvUgroBnAZw9BoVeCi922' can update/delete document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @deny (update, delete) User with UID 'OTHER_USER_ID' cannot update/delete document '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-     * @principle Enforces document ownership for writes and reads, validates path consistency on create.
+     * @allow (create) - Allow an authenticated user to create a resultado document where the resultadoId matches their UID.
+     * @allow (get, update, delete) - Allow an authenticated user to get, update, or delete an existing resultado document where the resultadoId matches their UID.
+     * @deny (create) - Deny an unauthenticated user from creating a resultado document.
+     * @deny (update, delete) - Deny an authenticated user from updating or deleting a resultado document where the resultadoId does not match their UID.
+     * @principle Enforces document ownership for all writes.
      */
     match /resultados/{resultadoId} {
-      // Allow the user to read their own document
-      allow get: if isSignedIn() && isOwner(resultadoId);
-      // Allow the user to list their own documents.
-      allow list: if isSignedIn() && isOwner(resultadoId);
-
-      // Allow the user to create their own document if the document id matches their user id
+      allow get: if false;
+      allow list: if false;
       allow create: if isSignedIn() && isOwner(resultadoId) && request.resource.data.id == resultadoId;
-      // Allow the user to update their own document if it exists
-      allow update: if isSignedIn() && isExistingOwner(resultadoId) && resource.data.id == resultadoId;
-      // Allow the user to delete their own document if it exists
-      allow delete: if isSignedIn() && isExistingOwner(resultadoId);
+      allow update: if isExistingOwner(resultadoId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(resultadoId);
     }
-  }
-
-  // Helper function to determine if the user is signed in
-  function isSignedIn() {
-    return request.auth != null;
-  }
-
-  // Helper function to determine if the user is the owner of the document
-  function isOwner(userId) {
-    return request.auth.uid == userId;
-  }
-
-    // Helper function to determine if the user is the owner of the document, and the document exists
-  function isExistingOwner(userId) {
-    return isOwner(userId) && resource != null;
   }
 }
