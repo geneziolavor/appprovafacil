@@ -31,6 +31,7 @@ export type Questao = {
   provaId: string;
   numero: number;
   enunciado: string;
+  tipo: string;
 };
 
 export type RespostaOficial = {

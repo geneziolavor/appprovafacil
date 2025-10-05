@@ -75,6 +75,7 @@ export default function QuestoesPage() {
       numero: Number(formData.get('numero')),
       enunciado: formData.get('enunciado') as string,
       provaId: provaId,
+      tipo: 'dissertativa', // Adding mock data for required field
     };
 
     if (editingQuestao) {
