@@ -9,26 +9,39 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, doc, query, where } from "firebase/firestore";
-import type { Prova, Resultado } from "@/lib/types";
+import type { Aluno, Prova, Resultado } from "@/lib/types";
 
 export default function ResultadosPage({ params }: { params: { id: string } }) {
   const firestore = useFirestore();
   const provaId = params.id;
   
+  // Carrega a prova
   const provaDocRef = useMemoFirebase(() => doc(firestore, 'provas', provaId), [firestore, provaId]);
   const { data: prova, isLoading: isProvaLoading } = useDoc<Prova>(provaDocRef);
 
-  const resultadosCollection = useMemoFirebase(() => collection(firestore, 'resultados'), [firestore]);
-  const resultadosQuery = useMemoFirebase(() => query(resultadosCollection, where('provaId', '==', provaId)), [resultadosCollection, provaId]);
+  // Carrega os resultados da prova
+  const resultadosCollectionRef = useMemoFirebase(() => collection(firestore, 'resultados'), [firestore]);
+  const resultadosQuery = useMemoFirebase(() => query(resultadosCollectionRef, where('provaId', '==', provaId)), [resultadosCollectionRef, provaId]);
   const { data: resultados, isLoading: areResultadosLoading } = useCollection<Resultado>(resultadosQuery);
   
+  // Carrega todos os alunos para mapear o ID para o nome
+  const alunosCollectionRef = useMemoFirebase(() => collection(firestore, 'alunos'), [firestore]);
+  const { data: alunos, isLoading: areAlunosLoading } = useCollection<Aluno>(alunosCollectionRef);
 
-  if (isProvaLoading || areResultadosLoading) {
+  const getAlunoNome = (alunoId: string) => {
+    if (!alunos) return 'Carregando...';
+    const aluno = alunos.find(a => a.id === alunoId);
+    return aluno ? aluno.nome : 'Aluno não encontrado';
+  };
+
+  const isLoading = isProvaLoading || areResultadosLoading || areAlunosLoading;
+
+  if (isLoading) {
     return (
         <div className="flex min-h-screen w-full flex-col">
             <Header />
             <main className="flex-1 p-4 md:p-8 container mx-auto">
-            <PageHeader title="Carregando..." />
+            <PageHeader title="Carregando Resultados..." />
             </main>
         </div>
     );
@@ -45,10 +58,11 @@ export default function ResultadosPage({ params }: { params: { id: string } }) {
     );
   }
   
-  const totalAcertos = resultados?.reduce((sum, r) => sum + r.acertos, 0) || 0;
-  const totalErros = resultados?.reduce((sum, r) => sum + r.erros, 0) || 0;
-  const totalQuestoes = (resultados && resultados.length > 0) ? (resultados[0].acertos + resultados[0].erros) * resultados.length : 0;
-  const mediaGeral = (resultados && resultados.length > 0) ? resultados.reduce((sum, r) => sum + r.media, 0) / resultados.length : 0;
+  // Cálculos com segurança e baseados nos dados corretos
+  const totalAcertos = resultados?.reduce((sum, r) => sum + (r.acertos || 0), 0) || 0;
+  const totalQuestoesRespondidas = (prova.numeroDeQuestoes || 0) * (resultados?.length || 0);
+  const totalErros = totalQuestoesRespondidas - totalAcertos;
+  const mediaGeral = (resultados && resultados.length > 0) ? (resultados.reduce((sum, r) => sum + (r.media || 0), 0) / resultados.length) * 10 : 0;
   
   const chartData = [
     { name: 'Acertos', value: totalAcertos, fill: 'hsl(var(--chart-2))' },
@@ -79,7 +93,7 @@ export default function ResultadosPage({ params }: { params: { id: string } }) {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{totalAcertos}</div>
-                     <p className="text-xs text-muted-foreground">de {totalQuestoes} questões respondidas</p>
+                     <p className="text-xs text-muted-foreground">de {totalQuestoesRespondidas} questões respondidas</p>
                 </CardContent>
             </Card>
              <Card>
@@ -89,7 +103,7 @@ export default function ResultadosPage({ params }: { params: { id: string } }) {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{totalErros}</div>
-                    <p className="text-xs text-muted-foreground">de {totalQuestoes} questões respondidas</p>
+                    <p className="text-xs text-muted-foreground">de {totalQuestoesRespondidas} questões respondidas</p>
                 </CardContent>
             </Card>
             <Card>
@@ -130,19 +144,21 @@ export default function ResultadosPage({ params }: { params: { id: string } }) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {areResultadosLoading && <TableRow><TableCell colSpan={4} className="text-center">Carregando...</TableCell></TableRow>}
-                            {resultados?.map(r => (
-                                <TableRow key={r.id}>
-                                    <TableCell className="font-medium">Aluno ID: {r.alunoId}</TableCell>
-                                    <TableCell>{r.acertos}</TableCell>
-                                    <TableCell>{r.erros}</TableCell>
-                                    <TableCell className="text-right">
-                                        <Badge variant={r.media >= 60 ? 'default' : 'destructive'} className="bg-opacity-20 text-foreground">
-                                            {r.media.toFixed(1)}%
-                                        </Badge>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
+                            {resultados?.map(r => {
+                                const mediaAluno = (r.media || 0) * 10;
+                                return (
+                                    <TableRow key={r.id}>
+                                        <TableCell className="font-medium">{getAlunoNome(r.alunoId)}</TableCell>
+                                        <TableCell>{r.acertos}</TableCell>
+                                        <TableCell>{r.erros}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Badge variant={mediaAluno >= 60 ? 'default' : 'destructive'}>
+                                                {mediaAluno.toFixed(1)}%
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
                         </TableBody>
                     </Table>
                 </CardContent>
