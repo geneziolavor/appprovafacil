@@ -1,16 +1,7 @@
 'use client';
 
-import { TrendingUp } from 'lucide-react';
 import { Pie, PieChart, Cell } from 'recharts';
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import {
   ChartConfig,
   ChartContainer,
@@ -34,8 +25,6 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function ResultsChart({ data }: ResultsChartProps) {
-  const total = data.reduce((acc, curr) => acc + curr.value, 0);
-
   return (
     <ChartContainer
         config={chartConfig}
@@ -57,6 +46,7 @@ export function ResultsChart({ data }: ResultsChartProps) {
                 <Cell key={`cell-${index}`} fill={entry.fill} />
             ))}
         </Pie>
-        </ChartContainer>
+        </PieChart>
+    </ChartContainer>
   );
 }
