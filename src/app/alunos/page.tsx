@@ -33,7 +33,7 @@ import { PageHeader } from '@/components/page-header';
 import { Header } from '@/components/header';
 import type { Aluno, Escola, Turma } from '@/lib/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection, doc } from 'firebase/firestore';
 import {
   Select,
@@ -87,7 +87,7 @@ export default function AlunosPage() {
 
     if (editingAluno) {
       const docRef = doc(firestore, 'alunos', editingAluno.id);
-      updateDocumentNonBlocking(docRef, newAlunoData);
+      setDocumentNonBlocking(docRef, newAlunoData, { merge: true });
     } else {
       addDocumentNonBlocking(alunosCollection, newAlunoData);
     }
