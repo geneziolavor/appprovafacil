@@ -71,12 +71,13 @@ export default function CorrigirProvaPage() {
         description: `A prova foi corrigida com sucesso.`,
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       toast({
         variant: 'destructive',
-        title: 'Erro na Correção',
-        description: 'Ocorreu um erro ao tentar corrigir a prova com a IA. Tente novamente.',
+        title: 'Erro Detalhado da IA',
+        description: error.message || 'Um erro desconhecido ocorreu.',
+        duration: 9000,
       });
     } finally {
       setIsLoading(false);
