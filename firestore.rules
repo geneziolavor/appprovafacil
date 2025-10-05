@@ -1,302 +1,181 @@
 /**
-  * @fileOverview
-  * Core Philosophy: This ruleset enforces a strict ownership model. Each top-level collection
-  * is restricted to owner-only access.
-  *
-  * Data Structure: The Firestore database consists of several top-level collections, each
-  * representing a core entity (Aluno, Escola, Turma, Prova, Questao, RespostaOficial,
-  * RespostaAluno, Correcao, and Resultado). Each document within these collections is
-  * identified by a unique ID.
-  *
-  * Key Security Decisions:
-  *  - Listing of any collection is disallowed to prevent unauthorized data discovery.
-  *  - All write operations (create, update, delete) require the user to be the owner of the
-  *    document, as identified by the document ID matching the authenticated user's UID.
-  *  - Data shape validation is relaxed to allow for rapid prototyping.
-  */
- 
-
- rules_version = '2';
- service cloud.firestore {
+ * @fileoverview Firestore Security Rules for the application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict data-privacy model. Only authenticated users can access data.
+ * All entities reside in top-level collections, and access is granted on a per-collection basis.
+ *
+ * Data Structure:
+ * All data is stored in top-level collections (e.g., /alunos/{alunoId}, /escolas/{escolaId}).
+ *
+ * Key Security Decisions:
+ * - Listing collections is allowed for authenticated users by default.
+ * - There are no special admin roles or shared documents in this initial prototype.
+ * - All writes are denied by default and must be explicitly allowed by a rule.
+ *
+ * Authorization notes:
+ * - All collections are treated as private, requiring authentication for access.
+ * - The rules do not perform schema validation beyond authorization-critical fields.
+ */
+rules_version = '2';
+service cloud.firestore {
   match /databases/{database}/documents {
- 
 
-  /**
-   * @description Controls access to the 'alunos' collection. Only the user whose ID matches the 'alunoId' can read or write.
-   * @path /alunos/{alunoId}
-   * @allow (create) - Authenticated user '1BK1VzkYvUgroBnAZw9BoVeCi922' can create a document with ID '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-   * @deny (create) - Authenticated user 'OTHER_UID' cannot create a document with ID '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-   * @principle Enforces document ownership for writes.
-   */
-  match /alunos/{alunoId} {
+    /**
+     * @description Manages access to the 'alunos' collection.
+     * @path /alunos/{alunoId}
+     * @allow (read): Authenticated user can read any aluno document.
+     * @allow (create): Authenticated user can create an aluno document.
+     * @deny (read): Non-authenticated user cannot read any aluno document.
+     * @deny (create): Non-authenticated user cannot create any aluno document.
+     * @principle Path-based authorization ensures that only authenticated users can manage aluno documents.
+     */
+    match /alunos/{alunoId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if false; // TODO: Add owner validation if the schema is updated with an ownership field.
+      allow delete: if false; // TODO: Add owner validation if the schema is updated with an ownership field.
+    }
+
+    /**
+     * @description Manages access to the 'escolas' collection.
+     * @path /escolas/{escolaId}
+     * @allow (read): Authenticated user can read any escola document.
+     * @allow (create): Authenticated user can create an escola document.
+     * @deny (read): Non-authenticated user cannot read any escola document.
+     * @deny (create): Non-authenticated user cannot create any escola document.
+     * @principle Path-based authorization ensures that only authenticated users can manage escola documents.
+     */
+    match /escolas/{escolaId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if false; // TODO: Add owner validation if the schema is updated with an ownership field.
+      allow delete: if false; // TODO: Add owner validation if the schema is updated with an ownership field.
+    }
+
+    /**
+     * @description Manages access to the 'turmas' collection.
+     * @path /turmas/{turmaId}
+     * @allow (read): Authenticated user can read any turma document.
+     * @allow (create): Authenticated user can create a turma document.
+     * @deny (read): Non-authenticated user cannot read any turma document.
+     * @deny (create): Non-authenticated user cannot create any turma document.
+     * @principle Path-based authorization ensures that only authenticated users can manage turma documents.
+     */
+    match /turmas/{turmaId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if false; // TODO: Add owner validation if the schema is updated with an ownership field.
+      allow delete: if false; // TODO: Add owner validation if the schema is updated with an ownership field.
+    }
+
+    /**
+     * @description Manages access to the 'provas' collection.
+     * @path /provas/{provaId}
+     * @allow (read): Authenticated user can read any prova document.
+     * @allow (create): Authenticated user can create a prova document.
+     * @deny (read): Non-authenticated user cannot read any prova document.
+     * @deny (create): Non-authenticated user cannot create any prova document.
+     * @principle Path-based authorization ensures that only authenticated users can manage prova documents.
+     */
+    match /provas/{provaId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if false; // TODO: Add owner validation if the schema is updated with an ownership field.
+      allow delete: if false; // TODO: Add owner validation if the schema is updated with an ownership field.
+    }
+
+    /**
+     * @description Manages access to the 'questoes' collection.
+     * @path /questoes/{questaoId}
+     * @allow (read): Authenticated user can read any questao document.
+     * @allow (create): Authenticated user can create a questao document.
+     * @deny (read): Non-authenticated user cannot read any questao document.
+     * @deny (create): Non-authenticated user cannot create any questao document.
+     * @principle Path-based authorization ensures that only authenticated users can manage questao documents.
+     */
+    match /questoes/{questaoId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if false; // TODO: Add owner validation if the schema is updated with an ownership field.
+      allow delete: if false; // TODO: Add owner validation if the schema is updated with an ownership field.
+    }
+
+    /**
+     * @description Manages access to the 'respostas_oficiais' collection.
+     * @path /respostas_oficiais/{respostaOficialId}
+     * @allow (read): Authenticated user can read any resposta_oficial document.
+     * @allow (create): Authenticated user can create a resposta_oficial document.
+     * @deny (read): Non-authenticated user cannot read any resposta_oficial document.
+     * @deny (create): Non-authenticated user cannot create any resposta_oficial document.
+     * @principle Path-based authorization ensures that only authenticated users can manage respostas_oficiais documents.
+     */
+    match /respostas_oficiais/{respostaOficialId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if false; // TODO: Add owner validation if the schema is updated with an ownership field.
+      allow delete: if false; // TODO: Add owner validation if the schema is updated with an ownership field.
+    }
+
+    /**
+     * @description Manages access to the 'respostas_alunos' collection.
+     * @path /respostas_alunos/{respostaAlunoId}
+     * @allow (read): Authenticated user can read any resposta_aluno document.
+     * @allow (create): Authenticated user can create a resposta_aluno document.
+     * @deny (read): Non-authenticated user cannot read any resposta_aluno document.
+     * @deny (create): Non-authenticated user cannot create any resposta_aluno document.
+     * @principle Path-based authorization ensures that only authenticated users can manage respostas_alunos documents.
+     */
+    match /respostas_alunos/{respostaAlunoId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if false; // TODO: Add owner validation if the schema is updated with an ownership field.
+      allow delete: if false; // TODO: Add owner validation if the schema is updated with an ownership field.
+    }
+
+    /**
+     * @description Manages access to the 'correcoes' collection.
+     * @path /correcoes/{correcaoId}
+     * @allow (read): Authenticated user can read any correcao document.
+     * @allow (create): Authenticated user can create a correcao document.
+     * @deny (read): Non-authenticated user cannot read any correcao document.
+     * @deny (create): Non-authenticated user cannot create any correcao document.
+     * @principle Path-based authorization ensures that only authenticated users can manage correcoes documents.
+     */
+    match /correcoes/{correcaoId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if false; // TODO: Add owner validation if the schema is updated with an ownership field.
+      allow delete: if false; // TODO: Add owner validation if the schema is updated with an ownership field.
+    }
+
+    /**
+     * @description Manages access to the 'resultados' collection.
+     * @path /resultados/{resultadoId}
+     * @allow (read): Authenticated user can read any resultado document.
+     * @allow (create): Authenticated user can create a resultado document.
+     * @deny (read): Non-authenticated user cannot read any resultado document.
+     * @deny (create): Non-authenticated user cannot create any resultado document.
+     * @principle Path-based authorization ensures that only authenticated users can manage resultados documents.
+     */
+    match /resultados/{resultadoId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if false; // TODO: Add owner validation if the schema is updated with an ownership field.
+      allow delete: if false; // TODO: Add owner validation if the schema is updated with an ownership field.
+    }
+  }
+
   function isSignedIn() {
-  return request.auth != null;
+    return request.auth != null;
   }
- 
-
-  function isOwner(alunoId) {
-  return isSignedIn() && request.auth.uid == alunoId;
-  }
- 
-
-  function isExistingOwner(alunoId) {
-  return isOwner(alunoId) && resource != null;
-  }
- 
-
-  allow get: if isOwner(alunoId);
-  allow list: if false;
-  allow create: if isOwner(alunoId);
-  allow update: if isExistingOwner(alunoId);
-  allow delete: if isExistingOwner(alunoId);
-  }
- 
-
-  /**
-   * @description Controls access to the 'escolas' collection. Only the user whose ID matches the 'escolaId' can read or write.
-   * @path /escolas/{escolaId}
-   * @allow (create) - Authenticated user '1BK1VzkYvUgroBnAZw9BoVeCi922' can create a document with ID '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-   * @deny (create) - Authenticated user 'OTHER_UID' cannot create a document with ID '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-   * @principle Enforces document ownership for writes.
-   */
-  match /escolas/{escolaId} {
-  function isSignedIn() {
-  return request.auth != null;
-  }
- 
-
-  function isOwner(escolaId) {
-  return isSignedIn() && request.auth.uid == escolaId;
-  }
- 
-
-  function isExistingOwner(escolaId) {
-  return isOwner(escolaId) && resource != null;
-  }
- 
-
-  allow get: if isOwner(escolaId);
-  allow list: if false;
-  allow create: if isOwner(escolaId);
-  allow update: if isExistingOwner(escolaId);
-  allow delete: if isExistingOwner(escolaId);
-  }
- 
-
-  /**
-   * @description Controls access to the 'turmas' collection. Only the user whose ID matches the 'turmaId' can read or write.
-   * @path /turmas/{turmaId}
-   * @allow (create) - Authenticated user '1BK1VzkYvUgroBnAZw9BoVeCi922' can create a document with ID '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-   * @deny (create) - Authenticated user 'OTHER_UID' cannot create a document with ID '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-   * @principle Enforces document ownership for writes.
-   */
-  match /turmas/{turmaId} {
-  function isSignedIn() {
-  return request.auth != null;
-  }
- 
-
-  function isOwner(turmaId) {
-  return isSignedIn() && request.auth.uid == turmaId;
-  }
- 
-
-  function isExistingOwner(turmaId) {
-  return isOwner(turmaId) && resource != null;
-  }
- 
-
-  allow get: if isOwner(turmaId);
-  allow list: if false;
-  allow create: if isOwner(turmaId);
-  allow update: if isExistingOwner(turmaId);
-  allow delete: if isExistingOwner(turmaId);
-  }
- 
-
-  /**
-   * @description Controls access to the 'provas' collection. Only the user whose ID matches the 'provaId' can read or write.
-   * @path /provas/{provaId}
-   * @allow (create) - Authenticated user '1BK1VzkYvUgroBnAZw9BoVeCi922' can create a document with ID '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-   * @deny (create) - Authenticated user 'OTHER_UID' cannot create a document with ID '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-   * @principle Enforces document ownership for writes.
-   */
-  match /provas/{provaId} {
-  function isSignedIn() {
-  return request.auth != null;
-  }
- 
-
-  function isOwner(provaId) {
-  return isSignedIn() && request.auth.uid == provaId;
-  }
- 
-
-  function isExistingOwner(provaId) {
-  return isOwner(provaId) && resource != null;
-  }
- 
-
-  allow get: if isOwner(provaId);
-  allow list: if false;
-  allow create: if isOwner(provaId);
-  allow update: if isExistingOwner(provaId);
-  allow delete: if isExistingOwner(provaId);
-  }
- 
-
-  /**
-   * @description Controls access to the 'questoes' collection. Only the user whose ID matches the 'questaoId' can read or write.
-   * @path /questoes/{questaoId}
-   * @allow (create) - Authenticated user '1BK1VzkYvUgroBnAZw9BoVeCi922' can create a document with ID '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-   * @deny (create) - Authenticated user 'OTHER_UID' cannot create a document with ID '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-   * @principle Enforces document ownership for writes.
-   */
-  match /questoes/{questaoId} {
-  function isSignedIn() {
-  return request.auth != null;
-  }
- 
-
-  function isOwner(questaoId) {
-  return isSignedIn() && request.auth.uid == questaoId;
-  }
- 
-
-  function isExistingOwner(questaoId) {
-  return isOwner(questaoId) && resource != null;
-  }
- 
-
-  allow get: if isOwner(questaoId);
-  allow list: if false;
-  allow create: if isOwner(questaoId);
-  allow update: if isExistingOwner(questaoId);
-  allow delete: if isExistingOwner(questaoId);
-  }
- 
-
-  /**
-   * @description Controls access to the 'respostas_oficiais' collection. Only the user whose ID matches the 'respostaOficialId' can read or write.
-   * @path /respostas_oficiais/{respostaOficialId}
-   * @allow (create) - Authenticated user '1BK1VzkYvUgroBnAZw9BoVeCi922' can create a document with ID '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-   * @deny (create) - Authenticated user 'OTHER_UID' cannot create a document with ID '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-   * @principle Enforces document ownership for writes.
-   */
-  match /respostas_oficiais/{respostaOficialId} {
-  function isSignedIn() {
-  return request.auth != null;
-  }
- 
-
-  function isOwner(respostaOficialId) {
-  return isSignedIn() && request.auth.uid == respostaOficialId;
-  }
- 
-
-  function isExistingOwner(respostaOficialId) {
-  return isOwner(respostaOficialId) && resource != null;
-  }
- 
-
-  allow get: if isOwner(respostaOficialId);
-  allow list: if false;
-  allow create: if isOwner(respostaOficialId);
-  allow update: if isExistingOwner(respostaOficialId);
-  allow delete: if isExistingOwner(respostaOficialId);
-  }
- 
-
-  /**
-   * @description Controls access to the 'respostas_alunos' collection. Only the user whose ID matches the 'respostaAlunoId' can read or write.
-   * @path /respostas_alunos/{respostaAlunoId}
-   * @allow (create) - Authenticated user '1BK1VzkYvUgroBnAZw9BoVeCi922' can create a document with ID '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-   * @deny (create) - Authenticated user 'OTHER_UID' cannot create a document with ID '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-   * @principle Enforces document ownership for writes.
-   */
-  match /respostas_alunos/{respostaAlunoId} {
-  function isSignedIn() {
-  return request.auth != null;
-  }
- 
-
-  function isOwner(respostaAlunoId) {
-  return isSignedIn() && request.auth.uid == respostaAlunoId;
-  }
- 
-
-  function isExistingOwner(respostaAlunoId) {
-  return isOwner(respostaAlunoId) && resource != null;
-  }
- 
-
-  allow get: if isOwner(respostaAlunoId);
-  allow list: if false;
-  allow create: if isOwner(respostaAlunoId);
-  allow update: if isExistingOwner(respostaAlunoId);
-  allow delete: if isExistingOwner(respostaAlunoId);
-  }
- 
-
-  /**
-   * @description Controls access to the 'correcoes' collection. Only the user whose ID matches the 'correcaoId' can read or write.
-   * @path /correcoes/{correcaoId}
-   * @allow (create) - Authenticated user '1BK1VzkYvUgroBnAZw9BoVeCi922' can create a document with ID '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-   * @deny (create) - Authenticated user 'OTHER_UID' cannot create a document with ID '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-   * @principle Enforces document ownership for writes.
-   */
-  match /correcoes/{correcaoId} {
-  function isSignedIn() {
-  return request.auth != null;
-  }
- 
-
-  function isOwner(correcaoId) {
-  return isSignedIn() && request.auth.uid == correcaoId;
-  }
- 
-
-  function isExistingOwner(correcaoId) {
-  return isOwner(correcaoId) && resource != null;
-  }
- 
-
-  allow get: if isOwner(correcaoId);
-  allow list: if false;
-  allow create: if isOwner(correcaoId);
-  allow update: if isExistingOwner(correcaoId);
-  allow delete: if isExistingOwner(correcaoId);
-  }
- 
-
-  /**
-   * @description Controls access to the 'resultados' collection. Only the user whose ID matches the 'resultadoId' can read or write.
-   * @path /resultados/{resultadoId}
-   * @allow (create) - Authenticated user '1BK1VzkYvUgroBnAZw9BoVeCi922' can create a document with ID '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-   * @deny (create) - Authenticated user 'OTHER_UID' cannot create a document with ID '1BK1VzkYvUgroBnAZw9BoVeCi922'.
-   * @principle Enforces document ownership for writes.
-   */
-  match /resultados/{resultadoId} {
-  function isSignedIn() {
-  return request.auth != null;
-  }
- 
-
-  function isOwner(resultadoId) {
-  return isSignedIn() && request.auth.uid == resultadoId;
-  }
- 
-
-  function isExistingOwner(resultadoId) {
-  return isOwner(resultadoId) && resource != null;
-  }
- 
-
-  allow get: if isOwner(resultadoId);
-  allow list: if false;
-  allow create: if isOwner(resultadoId);
-  allow update: if isExistingOwner(resultadoId);
-  allow delete: if isExistingOwner(resultadoId);
-  }
-  }
- }
+}
