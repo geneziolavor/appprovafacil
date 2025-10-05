@@ -1,0 +1,57 @@
+export type Aluno = {
+  id: string;
+  nome: string;
+  email: string;
+  escolaId: string;
+  turmaId:string;
+};
+
+export type Escola = {
+  id: string;
+  nome: string;
+  cidade: string;
+};
+
+export type Turma = {
+  id: string;
+  nome: string;
+  ano: number;
+  escolaId: string;
+};
+
+export type Prova = {
+  id: string;
+  titulo: string;
+  data: string;
+  turmaId: string;
+};
+
+export type Questao = {
+  id: string;
+  provaId: string;
+  numero: number;
+  enunciado: string;
+};
+
+export type RespostaOficial = {
+  id: string;
+  questaoId: string;
+  resposta: string;
+};
+
+export type Correcao = {
+  id: string;
+  alunoId: string;
+  provaId: string;
+  questaoId: string;
+  correto: boolean;
+};
+
+export type Resultado = {
+  id: string;
+  alunoId: string;
+  provaId: string;
+  acertos: number;
+  erros: number;
+  media: number;
+};
