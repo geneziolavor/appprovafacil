@@ -49,8 +49,11 @@ export type Correcao = {
   id: string;
   alunoId: string;
   provaId: string;
-  questaoId: string;
-  correto: boolean;
+  dataCorrecao: string;
+  correcoes: {
+    questionId: string;
+    correct: boolean;
+  }[];
 };
 
 export type Resultado = {
@@ -61,5 +64,3 @@ export type Resultado = {
   erros: number;
   media: number;
 };
-
-    

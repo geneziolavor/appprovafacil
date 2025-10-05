@@ -88,16 +88,12 @@ export default function CorrigirProvaPage() {
     
     // Save corrections
     const correcoesCollection = collection(firestore, 'correcoes');
-    for (const correction of result.corrections) {
-      const correcaoData = {
+    addDocumentNonBlocking(correcoesCollection, {
         alunoId: 'mock-student-01',
         provaId: provaId,
-        questaoId: correction.questionId,
-        correto: correction.correct,
+        correcoes: result.corrections,
         dataCorrecao: new Date().toISOString(),
-      };
-      await addDoc(correcoesCollection, correcaoData);
-    }
+    });
     
     // Save results
     const resultadosCollection = collection(firestore, 'resultados');
