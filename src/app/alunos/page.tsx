@@ -34,8 +34,8 @@ import { PageHeader } from '@/components/page-header';
 import { Header } from '@/components/header';
 import type { Aluno, Escola, Turma } from '@/lib/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { addDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
-import { collection } from 'firebase/firestore';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc } from 'firebase/firestore';
 import {
   Select,
   SelectContent,
@@ -43,11 +43,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
 
 export default function AlunosPage() {
   const firestore = useFirestore();
-  const { toast } = useToast();
   const alunosCollection = useMemoFirebase(() => collection(firestore, 'alunos'), [firestore]);
   const { data: alunos, isLoading } = useCollection<Aluno>(alunosCollection);
 
@@ -68,15 +66,9 @@ export default function AlunosPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      const docRef = doc(firestore, 'alunos', id);
-      await deleteDoc(docRef);
-      toast({ title: "Aluno excluído com sucesso!" });
-    } catch (error) {
-      console.error("Error deleting document: ", error);
-      toast({ variant: 'destructive', title: "Erro ao excluir", description: "Ocorreu um erro ao excluir o aluno." });
-    }
+  const handleDelete = (id: string) => {
+    const docRef = doc(firestore, 'alunos', id);
+    deleteDocumentNonBlocking(docRef);
   };
   
   const handleOpenDialog = () => {
@@ -84,7 +76,7 @@ export default function AlunosPage() {
     setIsDialogOpen(true);
   }
 
-  const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSave = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const newAlunoData = {
@@ -94,21 +86,14 @@ export default function AlunosPage() {
       turmaId: formData.get('turmaId') as string,
     };
 
-    try {
-      if (editingAluno) {
-        const docRef = doc(firestore, 'alunos', editingAluno.id);
-        await setDoc(docRef, newAlunoData, { merge: true });
-        toast({ title: "Aluno atualizado com sucesso!" });
-      } else {
-        await addDoc(alunosCollection, newAlunoData);
-        toast({ title: "Aluno adicionado com sucesso!" });
-      }
-      setIsDialogOpen(false);
-      setEditingAluno(null);
-    } catch (error) {
-       console.error("Error saving document: ", error);
-       toast({ variant: 'destructive', title: "Erro ao salvar", description: "Ocorreu um erro ao salvar o aluno. Verifique as permissões do Firestore." });
+    if (editingAluno) {
+      const docRef = doc(firestore, 'alunos', editingAluno.id);
+      setDocumentNonBlocking(docRef, newAlunoData, { merge: true });
+    } else {
+      addDocumentNonBlocking(alunosCollection, newAlunoData);
     }
+    setIsDialogOpen(false);
+    setEditingAluno(null);
   };
 
   return (
