@@ -1,241 +1,259 @@
 /**
- * @fileoverview Firestore Security Rules for the application.
- *
- * Core Philosophy:
- * This ruleset enforces a strict data isolation model, where each top-level collection
- * is secured independently. It prioritizes simplicity and directness, aligning with the
- * application's CRUD-centric features.
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a strict data isolation model. Each top-level collection is only accessible to authenticated users.
  *
  * Data Structure:
- * The Firestore database consists of several top-level collections:
- * - /alunos/{alunoId}
- * - /escolas/{escolaId}
- * - /turmas/{turmaId}
- * - /provas/{provaId}
- * - /questoes/{questaoId}
- * - /respostas_oficiais/{respostaOficialId}
- * - /respostas_alunos/{respostaAlunoId}
- * - /correcoes/{correcaoId}
- * - /resultados/{resultadoId}
+ * The database consists of top-level collections for each entity: `/alunos`, `/escolas`, `/turmas`, `/provas`, `/questoes`, `/respostas_oficiais`, `/respostas_alunos`, `/correcoes`, and `/resultados`. There are no nested subcollections.
  *
  * Key Security Decisions:
- * - All top-level collections require authentication to read or write.
- * - List operations are enabled with authentication.
- * - No denormalization is required due to the simple, isolated nature of the data.
+ * - All top-level collections require authentication for all operations.
+ * - `list` operations are only allowed for authenticated users.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Rules for the /alunos collection.  Requires the user to be authenticated to perform any operations.
+     * @description Manages access to student data.
      * @path /alunos/{alunoId}
-     * @allow (create) Signed-in user can create a new aluno document.
-     * @deny (create) User is not signed in, so cannot create a new aluno document.
-     * @allow (get) Signed-in user can get an aluno document.
-     * @deny (get) User is not signed in, so cannot get the aluno document.
-     * @allow (list) Signed-in user can list all aluno documents.
-     * @deny (list) User is not signed in, so cannot list the aluno documents.
-     * @allow (update) Signed-in user can update an existing aluno document.
-     * @deny (update) User is not signed in, so cannot update the aluno document.
-     * @allow (delete) Signed-in user can delete an existing aluno document.
-     * @deny (delete) User is not signed in, so cannot delete the aluno document.
-     * @principle Enforces that users must be authenticated to access aluno documents.
+     * @allow (create) - Authenticated user creates an aluno with matching ID.
+     * @deny (create) - Unauthenticated user attempts to create an aluno.
+     * @allow (get, list, update, delete) - Authenticated user attempts to get, list, update or delete an aluno with matching ID.
+     * @deny (get, list, update, delete) - Unauthenticated user attempts to get, list, update, or delete an aluno.
+     * @principle Enforces document ownership for all operations.
      */
     match /alunos/{alunoId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isOwner(alunoId) {
+        return request.auth.uid == alunoId;
+      }
+      function isExistingOwner(alunoId) {
+        return isOwner(alunoId) && resource != null;
+      }
+
       allow get: if isSignedIn();
       allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow create: if isSignedIn() && isOwner(alunoId);
+      allow update: if isExistingOwner(alunoId);
+      allow delete: if isExistingOwner(alunoId);
     }
 
     /**
-     * @description Rules for the /escolas collection. Requires the user to be authenticated to perform any operations.
+     * @description Manages access to school data.
      * @path /escolas/{escolaId}
-     * @allow (create) Signed-in user can create a new escola document.
-     * @deny (create) User is not signed in, so cannot create a new escola document.
-     * @allow (get) Signed-in user can get an escola document.
-     * @deny (get) User is not signed in, so cannot get the escola document.
-     * @allow (list) Signed-in user can list all escola documents.
-     * @deny (list) User is not signed in, so cannot list the escola documents.
-     * @allow (update) Signed-in user can update an existing escola document.
-     * @deny (update) User is not signed in, so cannot update the escola document.
-     * @allow (delete) Signed-in user can delete an existing escola document.
-     * @deny (delete) User is not signed in, so cannot delete the escola document.
-     * @principle Enforces that users must be authenticated to access escola documents.
+     * @allow (create) - Authenticated user creates an escola with matching ID.
+     * @deny (create) - Unauthenticated user attempts to create an escola.
+     * @allow (get, list, update, delete) - Authenticated user attempts to get, list, update or delete an escola with matching ID.
+     * @deny (get, list, update, delete) - Unauthenticated user attempts to get, list, update, or delete an escola.
+     * @principle Enforces document ownership for all operations.
      */
     match /escolas/{escolaId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isOwner(escolaId) {
+        return request.auth.uid == escolaId;
+      }
+      function isExistingOwner(escolaId) {
+        return isOwner(escolaId) && resource != null;
+      }
+
       allow get: if isSignedIn();
       allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow create: if isSignedIn() && isOwner(escolaId);
+      allow update: if isExistingOwner(escolaId);
+      allow delete: if isExistingOwner(escolaId);
     }
 
     /**
-     * @description Rules for the /turmas collection. Requires the user to be authenticated to perform any operations.
+     * @description Manages access to class data.
      * @path /turmas/{turmaId}
-     * @allow (create) Signed-in user can create a new turma document.
-     * @deny (create) User is not signed in, so cannot create a new turma document.
-     * @allow (get) Signed-in user can get a turma document.
-     * @deny (get) User is not signed in, so cannot get the turma document.
-     * @allow (list) Signed-in user can list all turma documents.
-     * @deny (list) User is not signed in, so cannot list the turma documents.
-     * @allow (update) Signed-in user can update an existing turma document.
-     * @deny (update) User is not signed in, so cannot update the turma document.
-     * @allow (delete) Signed-in user can delete an existing turma document.
-     * @deny (delete) User is not signed in, so cannot delete the turma document.
-     * @principle Enforces that users must be authenticated to access turma documents.
+     * @allow (create) - Authenticated user creates a turma with matching ID.
+     * @deny (create) - Unauthenticated user attempts to create a turma.
+     * @allow (get, list, update, delete) - Authenticated user attempts to get, list, update or delete a turma with matching ID.
+     * @deny (get, list, update, delete) - Unauthenticated user attempts to get, list, update, or delete a turma.
+     * @principle Enforces document ownership for all operations.
      */
     match /turmas/{turmaId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isOwner(turmaId) {
+        return request.auth.uid == turmaId;
+      }
+      function isExistingOwner(turmaId) {
+        return isOwner(turmaId) && resource != null;
+      }
+
       allow get: if isSignedIn();
       allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow create: if isSignedIn() && isOwner(turmaId);
+      allow update: if isExistingOwner(turmaId);
+      allow delete: if isExistingOwner(turmaId);
     }
 
     /**
-     * @description Rules for the /provas collection. Requires the user to be authenticated to perform any operations.
+     * @description Manages access to test data.
      * @path /provas/{provaId}
-     * @allow (create) Signed-in user can create a new prova document.
-     * @deny (create) User is not signed in, so cannot create a new prova document.
-     * @allow (get) Signed-in user can get a prova document.
-     * @deny (get) User is not signed in, so cannot get the prova document.
-     * @allow (list) Signed-in user can list all prova documents.
-     * @deny (list) User is not signed in, so cannot list the prova documents.
-     * @allow (update) Signed-in user can update an existing prova document.
-     * @deny (update) User is not signed in, so cannot update the prova document.
-     * @allow (delete) Signed-in user can delete an existing prova document.
-     * @deny (delete) User is not signed in, so cannot delete the prova document.
-     * @principle Enforces that users must be authenticated to access prova documents.
+     * @allow (create) - Authenticated user creates a prova with matching ID.
+     * @deny (create) - Unauthenticated user attempts to create a prova.
+     * @allow (get, list, update, delete) - Authenticated user attempts to get, list, update or delete a prova with matching ID.
+     * @deny (get, list, update, delete) - Unauthenticated user attempts to get, list, update, or delete a prova.
+     * @principle Enforces document ownership for all operations.
      */
     match /provas/{provaId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isOwner(provaId) {
+        return request.auth.uid == provaId;
+      }
+      function isExistingOwner(provaId) {
+        return isOwner(provaId) && resource != null;
+      }
+
       allow get: if isSignedIn();
       allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow create: if isSignedIn() && isOwner(provaId);
+      allow update: if isExistingOwner(provaId);
+      allow delete: if isExistingOwner(provaId);
     }
 
     /**
-     * @description Rules for the /questoes collection. Requires the user to be authenticated to perform any operations.
+     * @description Manages access to question data.
      * @path /questoes/{questaoId}
-     * @allow (create) Signed-in user can create a new questao document.
-     * @deny (create) User is not signed in, so cannot create a new questao document.
-     * @allow (get) Signed-in user can get a questao document.
-     * @deny (get) User is not signed in, so cannot get the questao document.
-     * @allow (list) Signed-in user can list all questao documents.
-     * @deny (list) User is not signed in, so cannot list the questao documents.
-     * @allow (update) Signed-in user can update an existing questao document.
-     * @deny (update) User is not signed in, so cannot update the questao document.
-     * @allow (delete) Signed-in user can delete an existing questao document.
-     * @deny (delete) User is not signed in, so cannot delete the questao document.
-     * @principle Enforces that users must be authenticated to access questao documents.
+     * @allow (create) - Authenticated user creates a questao with matching ID.
+     * @deny (create) - Unauthenticated user attempts to create a questao.
+     * @allow (get, list, update, delete) - Authenticated user attempts to get, list, update or delete a questao with matching ID.
+     * @deny (get, list, update, delete) - Unauthenticated user attempts to get, list, update, or delete a questao.
+     * @principle Enforces document ownership for all operations.
      */
     match /questoes/{questaoId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isOwner(questaoId) {
+        return request.auth.uid == questaoId;
+      }
+      function isExistingOwner(questaoId) {
+        return isOwner(questaoId) && resource != null;
+      }
+
       allow get: if isSignedIn();
       allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow create: if isSignedIn() && isOwner(questaoId);
+      allow update: if isExistingOwner(questaoId);
+      allow delete: if isExistingOwner(questaoId);
     }
 
     /**
-     * @description Rules for the /respostas_oficiais collection. Requires the user to be authenticated to perform any operations.
+     * @description Manages access to official answer data.
      * @path /respostas_oficiais/{respostaOficialId}
-     * @allow (create) Signed-in user can create a new respostaOficial document.
-     * @deny (create) User is not signed in, so cannot create a new respostaOficial document.
-     * @allow (get) Signed-in user can get a respostaOficial document.
-     * @deny (get) User is not signed in, so cannot get the respostaOficial document.
-     * @allow (list) Signed-in user can list all respostaOficial documents.
-     * @deny (list) User is not signed in, so cannot list the respostaOficial documents.
-     * @allow (update) Signed-in user can update an existing respostaOficial document.
-     * @deny (update) User is not signed in, so cannot update the respostaOficial document.
-     * @allow (delete) Signed-in user can delete an existing respostaOficial document.
-     * @deny (delete) User is not signed in, so cannot delete the respostaOficial document.
-     * @principle Enforces that users must be authenticated to access respostaOficial documents.
+     * @allow (create) - Authenticated user creates a resposta oficial with matching ID.
+     * @deny (create) - Unauthenticated user attempts to create a resposta oficial.
+     * @allow (get, list, update, delete) - Authenticated user attempts to get, list, update or delete a resposta oficial with matching ID.
+     * @deny (get, list, update, delete) - Unauthenticated user attempts to get, list, update, or delete a resposta oficial.
+     * @principle Enforces document ownership for all operations.
      */
     match /respostas_oficiais/{respostaOficialId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isOwner(respostaOficialId) {
+        return request.auth.uid == respostaOficialId;
+      }
+      function isExistingOwner(respostaOficialId) {
+        return isOwner(respostaOficialId) && resource != null;
+      }
+
       allow get: if isSignedIn();
       allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow create: if isSignedIn() && isOwner(respostaOficialId);
+      allow update: if isExistingOwner(respostaOficialId);
+      allow delete: if isExistingOwner(respostaOficialId);
     }
 
     /**
-     * @description Rules for the /respostas_alunos collection. Requires the user to be authenticated to perform any operations.
+     * @description Manages access to student answer data.
      * @path /respostas_alunos/{respostaAlunoId}
-     * @allow (create) Signed-in user can create a new respostaAluno document.
-     * @deny (create) User is not signed in, so cannot create a new respostaAluno document.
-     * @allow (get) Signed-in user can get a respostaAluno document.
-     * @deny (get) User is not signed in, so cannot get the respostaAluno document.
-     * @allow (list) Signed-in user can list all respostaAluno documents.
-     * @deny (list) User is not signed in, so cannot list the respostaAluno documents.
-     * @allow (update) Signed-in user can update an existing respostaAluno document.
-     * @deny (update) User is not signed in, so cannot update the respostaAluno document.
-     * @allow (delete) Signed-in user can delete an existing respostaAluno document.
-     * @deny (delete) User is not signed in, so cannot delete the respostaAluno document.
-     * @principle Enforces that users must be authenticated to access respostaAluno documents.
+     * @allow (create) - Authenticated user creates a resposta aluno with matching ID.
+     * @deny (create) - Unauthenticated user attempts to create a resposta aluno.
+     * @allow (get, list, update, delete) - Authenticated user attempts to get, list, update or delete a resposta aluno with matching ID.
+     * @deny (get, list, update, delete) - Unauthenticated user attempts to get, list, update, or delete a resposta aluno.
+     * @principle Enforces document ownership for all operations.
      */
     match /respostas_alunos/{respostaAlunoId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isOwner(respostaAlunoId) {
+        return request.auth.uid == respostaAlunoId;
+      }
+      function isExistingOwner(respostaAlunoId) {
+        return isOwner(respostaAlunoId) && resource != null;
+      }
+
       allow get: if isSignedIn();
       allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow create: if isSignedIn() && isOwner(respostaAlunoId);
+      allow update: if isExistingOwner(respostaAlunoId);
+      allow delete: if isExistingOwner(respostaAlunoId);
     }
 
     /**
-     * @description Rules for the /correcoes collection. Requires the user to be authenticated to perform any operations.
+     * @description Manages access to correction data.
      * @path /correcoes/{correcaoId}
-     * @allow (create) Signed-in user can create a new correcao document.
-     * @deny (create) User is not signed in, so cannot create a new correcao document.
-     * @allow (get) Signed-in user can get a correcao document.
-     * @deny (get) User is not signed in, so cannot get the correcao document.
-     * @allow (list) Signed-in user can list all correcao documents.
-     * @deny (list) User is not signed in, so cannot list the correcao documents.
-     * @allow (update) Signed-in user can update an existing correcao document.
-     * @deny (update) User is not signed in, so cannot update the correcao document.
-     * @allow (delete) Signed-in user can delete an existing correcao document.
-     * @deny (delete) User is not signed in, so cannot delete the correcao document.
-     * @principle Enforces that users must be authenticated to access correcao documents.
+     * @allow (create) - Authenticated user creates a correcao with matching ID.
+     * @deny (create) - Unauthenticated user attempts to create a correcao.
+     * @allow (get, list, update, delete) - Authenticated user attempts to get, list, update or delete a correcao with matching ID.
+     * @deny (get, list, update, delete) - Unauthenticated user attempts to get, list, update, or delete a correcao.
+     * @principle Enforces document ownership for all operations.
      */
     match /correcoes/{correcaoId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isOwner(correcaoId) {
+        return request.auth.uid == correcaoId;
+      }
+      function isExistingOwner(correcaoId) {
+        return isOwner(correcaoId) && resource != null;
+      }
+
       allow get: if isSignedIn();
       allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow create: if isSignedIn() && isOwner(correcaoId);
+      allow update: if isExistingOwner(correcaoId);
+      allow delete: if isExistingOwner(correcaoId);
     }
 
     /**
-     * @description Rules for the /resultados collection. Requires the user to be authenticated to perform any operations.
+     * @description Manages access to result data.
      * @path /resultados/{resultadoId}
-     * @allow (create) Signed-in user can create a new resultado document.
-     * @deny (create) User is not signed in, so cannot create a new resultado document.
-     * @allow (get) Signed-in user can get a resultado document.
-     * @deny (get) User is not signed in, so cannot get the resultado document.
-     * @allow (list) Signed-in user can list all resultado documents.
-     * @deny (list) User is not signed in, so cannot list the resultado documents.
-     * @allow (update) Signed-in user can update an existing resultado document.
-     * @deny (update) User is not signed in, so cannot update the resultado document.
-     * @allow (delete) Signed-in user can delete an existing resultado document.
-     * @deny (delete) User is not signed in, so cannot delete the resultado document.
-     * @principle Enforces that users must be authenticated to access resultado documents.
+     * @allow (create) - Authenticated user creates a resultado with matching ID.
+     * @deny (create) - Unauthenticated user attempts to create a resultado.
+     * @allow (get, list, update, delete) - Authenticated user attempts to get, list, update or delete a resultado with matching ID.
+     * @deny (get, list, update, delete) - Unauthenticated user attempts to get, list, update, or delete a resultado.
+     * @principle Enforces document ownership for all operations.
      */
     match /resultados/{resultadoId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isOwner(resultadoId) {
+        return request.auth.uid == resultadoId;
+      }
+      function isExistingOwner(resultadoId) {
+        return isOwner(resultadoId) && resource != null;
+      }
+
       allow get: if isSignedIn();
       allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
-    }
-
-    function isSignedIn() {
-      return request.auth != null;
+      allow create: if isSignedIn() && isOwner(resultadoId);
+      allow update: if isExistingOwner(resultadoId);
+      allow delete: if isExistingOwner(resultadoId);
     }
   }
 }
