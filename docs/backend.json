@@ -1,0 +1,438 @@
+{
+  "entities": {
+    "Aluno": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Aluno",
+      "type": "object",
+      "description": "Represents a student enrolled in the system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Aluno entity."
+        },
+        "nome": {
+          "type": "string",
+          "description": "The student's full name."
+        },
+        "dataNascimento": {
+          "type": "string",
+          "description": "The student's date of birth.",
+          "format": "date-time"
+        },
+        "escolaId": {
+          "type": "string",
+          "description": "Reference to Escola. (Relationship: Escola 1:N Aluno)"
+        },
+        "turmaId": {
+          "type": "string",
+          "description": "Reference to Turma. (Relationship: Turma 1:N Aluno)"
+        }
+      },
+      "required": [
+        "id",
+        "nome",
+        "dataNascimento",
+        "escolaId",
+        "turmaId"
+      ]
+    },
+    "Escola": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Escola",
+      "type": "object",
+      "description": "Represents a school in the system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Escola entity."
+        },
+        "nome": {
+          "type": "string",
+          "description": "The name of the school."
+        },
+        "endereco": {
+          "type": "string",
+          "description": "The address of the school."
+        }
+      },
+      "required": [
+        "id",
+        "nome",
+        "endereco"
+      ]
+    },
+    "Turma": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Turma",
+      "type": "object",
+      "description": "Represents a class or group of students.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Turma entity."
+        },
+        "nome": {
+          "type": "string",
+          "description": "The name of the class."
+        },
+        "escolaId": {
+          "type": "string",
+          "description": "Reference to Escola. (Relationship: Escola 1:N Turma)"
+        }
+      },
+      "required": [
+        "id",
+        "nome",
+        "escolaId"
+      ]
+    },
+    "Prova": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Prova",
+      "type": "object",
+      "description": "Represents a test or exam.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Prova entity."
+        },
+        "nome": {
+          "type": "string",
+          "description": "The name of the test."
+        },
+        "dataAplicacao": {
+          "type": "string",
+          "description": "The date when the test was administered.",
+          "format": "date-time"
+        },
+        "turmaId": {
+          "type": "string",
+          "description": "Reference to Turma. (Relationship: Turma 1:N Prova)"
+        }
+      },
+      "required": [
+        "id",
+        "nome",
+        "dataAplicacao",
+        "turmaId"
+      ]
+    },
+    "Questao": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Questao",
+      "type": "object",
+      "description": "Represents a question in a test.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Questao entity."
+        },
+        "provaId": {
+          "type": "string",
+          "description": "Reference to Prova. (Relationship: Prova 1:N Questao)"
+        },
+        "enunciado": {
+          "type": "string",
+          "description": "The text of the question."
+        },
+        "tipo": {
+          "type": "string",
+          "description": "The type of question (e.g., multiple choice, true/false)."
+        }
+      },
+      "required": [
+        "id",
+        "provaId",
+        "enunciado",
+        "tipo"
+      ]
+    },
+    "RespostaOficial": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "RespostaOficial",
+      "type": "object",
+      "description": "Represents the official answer to a question.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the RespostaOficial entity."
+        },
+        "questaoId": {
+          "type": "string",
+          "description": "Reference to Questao. (Relationship: Questao 1:N RespostaOficial)"
+        },
+        "resposta": {
+          "type": "string",
+          "description": "The correct answer to the question."
+        }
+      },
+      "required": [
+        "id",
+        "questaoId",
+        "resposta"
+      ]
+    },
+    "RespostaAluno": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "RespostaAluno",
+      "type": "object",
+      "description": "Represents a student's answer to a question.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the RespostaAluno entity."
+        },
+        "alunoId": {
+          "type": "string",
+          "description": "Reference to Aluno. (Relationship: Aluno 1:N RespostaAluno)"
+        },
+        "questaoId": {
+          "type": "string",
+          "description": "Reference to Questao. (Relationship: Questao 1:N RespostaAluno)"
+        },
+        "resposta": {
+          "type": "string",
+          "description": "The student's answer to the question."
+        },
+        "fotoResposta": {
+          "type": "string",
+          "description": "URL of the photo of the student's answer sheet.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "alunoId",
+        "questaoId",
+        "resposta",
+        "fotoResposta"
+      ]
+    },
+    "Correcao": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Correcao",
+      "type": "object",
+      "description": "Represents the grading record for a student's test.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Correcao entity."
+        },
+        "alunoId": {
+          "type": "string",
+          "description": "Reference to Aluno. (Relationship: Aluno 1:N Correcao)"
+        },
+        "provaId": {
+          "type": "string",
+          "description": "Reference to Prova. (Relationship: Prova 1:N Correcao)"
+        },
+        "dataCorrecao": {
+          "type": "string",
+          "description": "The date when the test was graded.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "alunoId",
+        "provaId",
+        "dataCorrecao"
+      ]
+    },
+    "Resultado": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Resultado",
+      "type": "object",
+      "description": "Represents the summary of a student's test results.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Resultado entity."
+        },
+        "correcaoId": {
+          "type": "string",
+          "description": "Reference to Correcao. (Relationship: Correcao 1:N Resultado)"
+        },
+        "acertos": {
+          "type": "number",
+          "description": "Number of correct answers."
+        },
+        "erros": {
+          "type": "number",
+          "description": "Number of incorrect answers."
+        },
+        "percentualAcertos": {
+          "type": "number",
+          "description": "Percentage of correct answers."
+        },
+        "mediaAcerto": {
+          "type": "number",
+          "description": "Average score."
+        }
+      },
+      "required": [
+        "id",
+        "correcaoId",
+        "acertos",
+        "erros",
+        "percentualAcertos",
+        "mediaAcerto"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/alunos/{alunoId}",
+        "definition": {
+          "entityName": "Aluno",
+          "schema": {
+            "$ref": "#/backend/entities/Aluno"
+          },
+          "description": "Stores student data.",
+          "params": [
+            {
+              "name": "alunoId",
+              "description": "The unique identifier for the aluno."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/escolas/{escolaId}",
+        "definition": {
+          "entityName": "Escola",
+          "schema": {
+            "$ref": "#/backend/entities/Escola"
+          },
+          "description": "Stores school data.",
+          "params": [
+            {
+              "name": "escolaId",
+              "description": "The unique identifier for the escola."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/turmas/{turmaId}",
+        "definition": {
+          "entityName": "Turma",
+          "schema": {
+            "$ref": "#/backend/entities/Turma"
+          },
+          "description": "Stores class data.",
+          "params": [
+            {
+              "name": "turmaId",
+              "description": "The unique identifier for the turma."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/provas/{provaId}",
+        "definition": {
+          "entityName": "Prova",
+          "schema": {
+            "$ref": "#/backend/entities/Prova"
+          },
+          "description": "Stores test data.",
+          "params": [
+            {
+              "name": "provaId",
+              "description": "The unique identifier for the prova."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/questoes/{questaoId}",
+        "definition": {
+          "entityName": "Questao",
+          "schema": {
+            "$ref": "#/backend/entities/Questao"
+          },
+          "description": "Stores question data.",
+          "params": [
+            {
+              "name": "questaoId",
+              "description": "The unique identifier for the questao."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/respostas_oficiais/{respostaOficialId}",
+        "definition": {
+          "entityName": "RespostaOficial",
+          "schema": {
+            "$ref": "#/backend/entities/RespostaOficial"
+          },
+          "description": "Stores official answer data.",
+          "params": [
+            {
+              "name": "respostaOficialId",
+              "description": "The unique identifier for the resposta oficial."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/respostas_alunos/{respostaAlunoId}",
+        "definition": {
+          "entityName": "RespostaAluno",
+          "schema": {
+            "$ref": "#/backend/entities/RespostaAluno"
+          },
+          "description": "Stores student answer data.",
+          "params": [
+            {
+              "name": "respostaAlunoId",
+              "description": "The unique identifier for the resposta do aluno."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/correcoes/{correcaoId}",
+        "definition": {
+          "entityName": "Correcao",
+          "schema": {
+            "$ref": "#/backend/entities/Correcao"
+          },
+          "description": "Stores correction data.",
+          "params": [
+            {
+              "name": "correcaoId",
+              "description": "The unique identifier for the correcao."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/resultados/{resultadoId}",
+        "definition": {
+          "entityName": "Resultado",
+          "schema": {
+            "$ref": "#/backend/entities/Resultado"
+          },
+          "description": "Stores result data.",
+          "params": [
+            {
+              "name": "resultadoId",
+              "description": "The unique identifier for the resultado."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to directly mirror the data relationships defined in the entities, leveraging hierarchical paths for clear ownership and simplified security rules. Each entity gets its own top-level collection. Since all entities are essentially private data, path-based ownership is used.\n\n*   `/alunos`: Stores `Aluno` entities.\n*   `/escolas`: Stores `Escola` entities.\n*   `/turmas`: Stores `Turma` entities.\n*   `/provas`: Stores `Prova` entities.\n*   `/questoes`: Stores `Questao` entities.\n*   `/respostas_oficiais`: Stores `RespostaOficial` entities.\n*   `/respostas_alunos`: Stores `RespostaAluno` entities.\n*   `/correcoes`: Stores `Correcao` entities.\n*   `/resultados`: Stores `Resultado` entities.\n\nThis structure prioritizes simplicity and directness, aligning well with the application's CRUD-centric features. The absence of deeply nested subcollections keeps the structure manageable and facilitates efficient querying.\n\n**Authorization Independence**:  Since there are no complex authorization requirements (like shared documents with specific roles), denormalization is not required in this structure.  Each entity is directly accessible and manageable, simplifying security rules.\n\n**QAPs (Rules are not Filters)**: The segregated structure, where each entity type resides in its own collection, inherently supports secure `list` operations. Rules can be defined at the collection level to control access based on user roles or other criteria without needing to filter data within the rules themselves."
+  }
+}

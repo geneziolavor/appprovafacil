@@ -1,0 +1,216 @@
+/**
+ * @fileoverview Firestore Security Rules for the application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict ownership model for all data entities.
+ * Each entity (Aluno, Escola, Turma, etc.) resides in its own top-level collection.
+ * Access is generally restricted to authenticated users. Write access is further restricted to the owner of the specific document, based on the document ID matching the user's ID.
+ *
+ * Data Structure:
+ * The Firestore database consists of several top-level collections, each representing a core entity in the application:
+ * - /alunos/{alunoId}
+ * - /escolas/{escolaId}
+ * - /turmas/{turmaId}
+ * - /provas/{provaId}
+ * - /questoes/{questaoId}
+ * - /respostas_oficiais/{respostaOficialId}
+ * - /respostas_alunos/{respostaAlunoId}
+ * - /correcoes/{correcaoId}
+ * - /resultados/{resultadoId}
+ *
+ * Key Security Decisions:
+ * - No user listing is allowed.
+ * - The rules default to a secure posture, explicitly denying access where not specifically granted.
+ * - The ID of the document is expected to match the user's UID for owner-only access.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if the user is signed in.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if the user is the owner of the document.
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Helper function to check if the user is the owner of the document and the document exists.
+    function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Allows an aluno to read and write their own data.
+     * @path /alunos/{alunoId}
+     * @allow (create) User with UID 'alunoId' can create their own profile.
+     * @deny (create) User with UID 'otherUserId' cannot create a profile with ID 'alunoId'.
+     * @allow (get, list) User with UID 'alunoId' can read their own profile.
+     * @deny (get, list) User with UID 'otherUserId' cannot read the profile with ID 'alunoId'.
+     * @allow (update, delete) User with UID 'alunoId' can update/delete their own profile.
+     * @deny (update, delete) User with UID 'otherUserId' cannot update/delete the profile with ID 'alunoId'.
+     * @principle Enforces document ownership for writes.
+     */
+    match /alunos/{alunoId} {
+      allow get: if isSignedIn() && isOwner(alunoId);
+      allow list: if isSignedIn() && isOwner(alunoId);
+      allow create: if isSignedIn() && isOwner(alunoId) && request.resource.data.id == alunoId;
+      allow update: if isSignedIn() && isExistingOwner(alunoId) && request.resource.data.id == resource.data.id;
+      allow delete: if isSignedIn() && isExistingOwner(alunoId);
+    }
+
+    /**
+     * @description Allows an escola to read and write their own data.
+     * @path /escolas/{escolaId}
+     * @allow (create) User with UID 'escolaId' can create their own profile.
+     * @deny (create) User with UID 'otherUserId' cannot create a profile with ID 'escolaId'.
+     * @allow (get, list) User with UID 'escolaId' can read their own profile.
+     * @deny (get, list) User with UID 'otherUserId' cannot read the profile with ID 'escolaId'.
+     * @allow (update, delete) User with UID 'escolaId' can update/delete their own profile.
+     * @deny (update, delete) User with UID 'otherUserId' cannot update/delete the profile with ID 'escolaId'.
+     * @principle Enforces document ownership for writes.
+     */
+    match /escolas/{escolaId} {
+      allow get: if isSignedIn() && isOwner(escolaId);
+      allow list: if isSignedIn() && isOwner(escolaId);
+      allow create: if isSignedIn() && isOwner(escolaId) && request.resource.data.id == escolaId;
+      allow update: if isSignedIn() && isExistingOwner(escolaId) && request.resource.data.id == resource.data.id;
+      allow delete: if isSignedIn() && isExistingOwner(escolaId);
+    }
+
+    /**
+     * @description Allows a turma to read and write their own data.
+     * @path /turmas/{turmaId}
+     * @allow (create) User with UID 'turmaId' can create their own profile.
+     * @deny (create) User with UID 'otherUserId' cannot create a profile with ID 'turmaId'.
+     * @allow (get, list) User with UID 'turmaId' can read their own profile.
+     * @deny (get, list) User with UID 'otherUserId' cannot read the profile with ID 'turmaId'.
+     * @allow (update, delete) User with UID 'turmaId' can update/delete their own profile.
+     * @deny (update, delete) User with UID 'otherUserId' cannot update/delete the profile with ID 'turmaId'.
+     * @principle Enforces document ownership for writes.
+     */
+    match /turmas/{turmaId} {
+      allow get: if isSignedIn() && isOwner(turmaId);
+      allow list: if isSignedIn() && isOwner(turmaId);
+      allow create: if isSignedIn() && isOwner(turmaId) && request.resource.data.id == turmaId;
+      allow update: if isSignedIn() && isExistingOwner(turmaId) && request.resource.data.id == resource.data.id;
+      allow delete: if isSignedIn() && isExistingOwner(turmaId);
+    }
+
+    /**
+     * @description Allows a prova to read and write their own data.
+     * @path /provas/{provaId}
+     * @allow (create) User with UID 'provaId' can create their own profile.
+     * @deny (create) User with UID 'otherUserId' cannot create a profile with ID 'provaId'.
+     * @allow (get, list) User with UID 'provaId' can read their own profile.
+     * @deny (get, list) User with UID 'otherUserId' cannot read the profile with ID 'provaId'.
+     * @allow (update, delete) User with UID 'provaId' can update/delete their own profile.
+     * @deny (update, delete) User with UID 'otherUserId' cannot update/delete the profile with ID 'provaId'.
+     * @principle Enforces document ownership for writes.
+     */
+    match /provas/{provaId} {
+      allow get: if isSignedIn() && isOwner(provaId);
+      allow list: if isSignedIn() && isOwner(provaId);
+      allow create: if isSignedIn() && isOwner(provaId) && request.resource.data.id == provaId;
+      allow update: if isSignedIn() && isExistingOwner(provaId) && request.resource.data.id == resource.data.id;
+      allow delete: if isSignedIn() && isExistingOwner(provaId);
+    }
+
+    /**
+     * @description Allows a questao to read and write their own data.
+     * @path /questoes/{questaoId}
+     * @allow (create) User with UID 'questaoId' can create their own profile.
+     * @deny (create) User with UID 'otherUserId' cannot create a profile with ID 'questaoId'.
+     * @allow (get, list) User with UID 'questaoId' can read their own profile.
+     * @deny (get, list) User with UID 'otherUserId' cannot read the profile with ID 'questaoId'.
+     * @allow (update, delete) User with UID 'questaoId' can update/delete their own profile.
+     * @deny (update, delete) User with UID 'otherUserId' cannot update/delete the profile with ID 'questaoId'.
+     * @principle Enforces document ownership for writes.
+     */
+    match /questoes/{questaoId} {
+      allow get: if isSignedIn() && isOwner(questaoId);
+      allow list: if isSignedIn() && isOwner(questaoId);
+      allow create: if isSignedIn() && isOwner(questaoId) && request.resource.data.id == questaoId;
+      allow update: if isSignedIn() && isExistingOwner(questaoId) && request.resource.data.id == resource.data.id;
+      allow delete: if isSignedIn() && isExistingOwner(questaoId);
+    }
+
+    /**
+     * @description Allows a resposta_oficial to read and write their own data.
+     * @path /respostas_oficiais/{respostaOficialId}
+     * @allow (create) User with UID 'respostaOficialId' can create their own profile.
+     * @deny (create) User with UID 'otherUserId' cannot create a profile with ID 'respostaOficialId'.
+     * @allow (get, list) User with UID 'respostaOficialId' can read their own profile.
+     * @deny (get, list) User with UID 'otherUserId' cannot read the profile with ID 'respostaOficialId'.
+     * @allow (update, delete) User with UID 'respostaOficialId' can update/delete their own profile.
+     * @deny (update, delete) User with UID 'otherUserId' cannot update/delete the profile with ID 'respostaOficialId'.
+     * @principle Enforces document ownership for writes.
+     */
+    match /respostas_oficiais/{respostaOficialId} {
+      allow get: if isSignedIn() && isOwner(respostaOficialId);
+      allow list: if isSignedIn() && isOwner(respostaOficialId);
+      allow create: if isSignedIn() && isOwner(respostaOficialId) && request.resource.data.id == respostaOficialId;
+      allow update: if isSignedIn() && isExistingOwner(respostaOficialId) && request.resource.data.id == resource.data.id;
+      allow delete: if isSignedIn() && isExistingOwner(respostaOficialId);
+    }
+
+    /**
+     * @description Allows a resposta_aluno to read and write their own data.
+     * @path /respostas_alunos/{respostaAlunoId}
+     * @allow (create) User with UID 'respostaAlunoId' can create their own profile.
+     * @deny (create) User with UID 'otherUserId' cannot create a profile with ID 'respostaAlunoId'.
+     * @allow (get, list) User with UID 'respostaAlunoId' can read their own profile.
+     * @deny (get, list) User with UID 'otherUserId' cannot read the profile with ID 'respostaAlunoId'.
+     * @allow (update, delete) User with UID 'respostaAlunoId' can update/delete their own profile.
+     * @deny (update, delete) User with UID 'otherUserId' cannot update/delete the profile with ID 'respostaAlunoId'.
+     * @principle Enforces document ownership for writes.
+     */
+    match /respostas_alunos/{respostaAlunoId} {
+      allow get: if isSignedIn() && isOwner(respostaAlunoId);
+      allow list: if isSignedIn() && isOwner(respostaAlunoId);
+      allow create: if isSignedIn() && isOwner(respostaAlunoId) && request.resource.data.id == respostaAlunoId;
+      allow update: if isSignedIn() && isExistingOwner(respostaAlunoId) && request.resource.data.id == resource.data.id;
+      allow delete: if isSignedIn() && isExistingOwner(respostaAlunoId);
+    }
+
+    /**
+     * @description Allows a correcao to read and write their own data.
+     * @path /correcoes/{correcaoId}
+     * @allow (create) User with UID 'correcaoId' can create their own profile.
+     * @deny (create) User with UID 'otherUserId' cannot create a profile with ID 'correcaoId'.
+     * @allow (get, list) User with UID 'correcaoId' can read their own profile.
+     * @deny (get, list) User with UID 'otherUserId' cannot read the profile with ID 'correcaoId'.
+     * @allow (update, delete) User with UID 'correcaoId' can update/delete their own profile.
+     * @deny (update, delete) User with UID 'otherUserId' cannot update/delete the profile with ID 'correcaoId'.
+     * @principle Enforces document ownership for writes.
+     */
+    match /correcoes/{correcaoId} {
+      allow get: if isSignedIn() && isOwner(correcaoId);
+      allow list: if isSignedIn() && isOwner(correcaoId);
+      allow create: if isSignedIn() && isOwner(correcaoId) && request.resource.data.id == correcaoId;
+      allow update: if isSignedIn() && isExistingOwner(correcaoId) && request.resource.data.id == resource.data.id;
+      allow delete: if isSignedIn() && isExistingOwner(correcaoId);
+    }
+
+    /**
+     * @description Allows a resultado to read and write their own data.
+     * @path /resultados/{resultadoId}
+     * @allow (create) User with UID 'resultadoId' can create their own profile.
+     * @deny (create) User with UID 'otherUserId' cannot create a profile with ID 'resultadoId'.
+     * @allow (get, list) User with UID 'resultadoId' can read their own profile.
+     * @deny (get, list) User with UID 'otherUserId' cannot read the profile with ID 'resultadoId'.
+     * @allow (update, delete) User with UID 'resultadoId' can update/delete their own profile.
+     * @deny (update, delete) User with UID 'otherUserId' cannot update/delete the profile with ID 'resultadoId'.
+     * @principle Enforces document ownership for writes.
+     */
+    match /resultados/{resultadoId} {
+      allow get: if isSignedIn() && isOwner(resultadoId);
+      allow list: if isSignedIn() && isOwner(resultadoId);
+      allow create: if isSignedIn() && isOwner(resultadoId) && request.resource.data.id == resultadoId;
+      allow update: if isSignedIn() && isExistingOwner(resultadoId) && request.resource.data.id == resource.data.id;
+      allow delete: if isSignedIn() && isExistingOwner(resultadoId);
+    }
+  }
+}
