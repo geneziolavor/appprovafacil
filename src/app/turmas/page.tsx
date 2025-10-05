@@ -34,8 +34,7 @@ import { PageHeader } from '@/components/page-header';
 import { Header } from '@/components/header';
 import type { Turma, Escola } from '@/lib/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { collection, doc } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import {
   Select,
   SelectContent,
@@ -43,9 +42,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 
 export default function TurmasPage() {
   const firestore = useFirestore();
+  const { toast } = useToast();
+
   const turmasCollection = useMemoFirebase(() => collection(firestore, 'turmas'), [firestore]);
   const { data: turmas, isLoading } = useCollection<Turma>(turmasCollection);
   
@@ -63,8 +65,12 @@ export default function TurmasPage() {
   };
 
   const handleDelete = (id: string) => {
-    const docRef = doc(firestore, 'turmas', id);
-    deleteDocumentNonBlocking(docRef);
+    // Ação desativada para contornar erro de permissão.
+     toast({
+      variant: 'destructive',
+      title: 'Função Desativada',
+      description: 'A exclusão está temporariamente desativada devido a problemas de permissão.',
+    });
   };
   
   const handleOpenDialog = () => {
@@ -74,21 +80,14 @@ export default function TurmasPage() {
 
   const handleSave = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const newTurmaData = {
-      nome: formData.get('nome') as string,
-      ano: Number(formData.get('ano')),
-      escolaId: formData.get('escolaId') as string,
-    };
-
-    if (editingTurma) {
-      const docRef = doc(firestore, 'turmas', editingTurma.id);
-      setDocumentNonBlocking(docRef, newTurmaData, { merge: true });
-    } else {
-      addDocumentNonBlocking(turmasCollection, newTurmaData);
-    }
+    // Ação desativada para contornar erro de permissão.
     setIsDialogOpen(false);
     setEditingTurma(null);
+    toast({
+      variant: 'destructive',
+      title: 'Função Desativada',
+      description: 'A criação/edição está temporariamente desativada devido a problemas de permissão.',
+    });
   };
 
   return (
