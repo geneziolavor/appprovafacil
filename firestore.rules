@@ -1,193 +1,382 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset enforces a strict data isolation model. Each top-level collection is only accessible to authenticated users.
- *
- * Data Structure:
- * The Firestore database consists of several top-level collections:
- * - /alunos/{alunoId}: Stores student data, with each document ID matching the student's user ID.
- * - /escolas/{escolaId}: Stores school data.
- * - /turmas/{turmaId}: Stores class data.
- * - /provas/{provaId}: Stores test data.
- * - /questoes/{questaoId}: Stores question data.
- * - /respostas_oficiais/{respostaOficialId}: Stores official answer data.
- * - /respostas_alunos/{respostaAlunoId}: Stores student answer data.
- * - /correcoes/{correcaoId}: Stores correction data.
- * - /resultados/{resultadoId}: Stores result data.
- *
- * Key Security Decisions:
- * - Listing of collections is explicitly denied to prevent unauthorized data discovery.
- * - All write operations require the user to be authenticated.
- */
-rules_version = '2';
-service cloud.firestore {
+  * @description This ruleset enforces a strict, path-based ownership model for all data.
+  * All collections are top-level, and access is restricted to authenticated users.
+  *
+  * Data Structure:
+  * - /alunos/{alunoId}: Stores student data, accessible only by the authenticated user matching the alunoId.
+  * - /escolas/{escolaId}: Stores school data, accessible only by the authenticated user matching the escolaId.
+  * - /turmas/{turmaId}: Stores class data, accessible only by the authenticated user matching the turmaId.
+  * - /provas/{provaId}: Stores test data, accessible only by the authenticated user matching the provaId.
+  * - /questoes/{questaoId}: Stores question data, accessible only by the authenticated user matching the questaoId.
+  * - /respostas_oficiais/{respostaOficialId}: Stores official answer data, accessible only by the authenticated user matching the respostaOficialId.
+  * - /respostas_alunos/{respostaAlunoId}: Stores student answer data, accessible only by the authenticated user matching the respostaAlunoId.
+  * - /correcoes/{correcaoId}: Stores correction data, accessible only by the authenticated user matching the correcaoId.
+  * - /resultados/{resultadoId}: Stores result data, accessible only by the authenticated user matching the resultadoId.
+  *
+  * Key Security Decisions:
+  * - Only authenticated users can access data.
+  * - Users can only access documents where the document ID matches their own user ID.
+  * - Listing collections is allowed only for the owner of the documents.
+  * - Data validation is relaxed in this prototype phase.
+  *
+  * Denormalization for Authorization: Not required due to the path-based ownership model.
+  * Structural Segregation: All entities are stored in separate top-level collections.
+  */
+ 
+
+ rules_version = '2';
+ service cloud.firestore {
   match /databases/{database}/documents {
+ 
 
-    /**
-     * @description Enforces that only authenticated users can read or write student data.
-     * @path /alunos/{alunoId}
-     * @allow (get, create, update, delete) if isSignedIn() and isOwner(alunoId)
-     * @deny (get) if !isSignedIn()
-     * @deny (create) if !isSignedIn()
-     * @deny (update) if !isSignedIn()
-     * @deny (delete) if !isSignedIn()
-     * @principle Enforces document ownership for writes.
-     */
-    match /alunos/{alunoId} {
-      allow get: if isSignedIn() && isOwner(alunoId);
-      allow list: if false;
-      allow create: if isSignedIn() && isOwner(alunoId) && request.resource.data.id == alunoId;
-      allow update: if isSignedIn() && isExistingOwner(alunoId) && resource.data.id == alunoId;
-      allow delete: if isSignedIn() && isExistingOwner(alunoId);
-    }
-
-    /**
-     * @description Enforces that only authenticated users can read or write school data.
-     * @path /escolas/{escolaId}
-     * @allow (get, create, update, delete) if isSignedIn()
-     * @deny (get) if !isSignedIn()
-     * @deny (create) if !isSignedIn()
-     * @deny (update) if !isSignedIn()
-     * @deny (delete) if !isSignedIn()
-     */
-    match /escolas/{escolaId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
-    }
-
-    /**
-     * @description Enforces that only authenticated users can read or write class data.
-     * @path /turmas/{turmaId}
-     * @allow (get, create, update, delete) if isSignedIn()
-     * @deny (list) Everyone, since this was the source of the error.
-     * @deny (get) if !isSignedIn()
-     * @deny (create) if !isSignedIn()
-     * @deny (update) if !isSignedIn()
-     * @deny (delete) if !isSignedIn()
-     */
-    match /turmas/{turmaId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
-    }
-
-    /**
-     * @description Enforces that only authenticated users can read or write test data.
-     * @path /provas/{provaId}
-     * @allow (get, create, update, delete) if isSignedIn()
-     * @deny (get) if !isSignedIn()
-     * @deny (create) if !isSignedIn()
-     * @deny (update) if !isSignedIn()
-     * @deny (delete) if !isSignedIn()
-     */
-    match /provas/{provaId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
-    }
-
-    /**
-     * @description Enforces that only authenticated users can read or write question data.
-     * @path /questoes/{questaoId}
-     * @allow (get, create, update, delete) if isSignedIn()
-     * @deny (get) if !isSignedIn()
-     * @deny (create) if !isSignedIn()
-     * @deny (update) if !isSignedIn()
-     * @deny (delete) if !isSignedIn()
-     */
-    match /questoes/{questaoId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
-    }
-
-    /**
-     * @description Enforces that only authenticated users can read or write official answer data.
-     * @path /respostas_oficiais/{respostaOficialId}
-     * @allow (get, create, update, delete) if isSignedIn()
-     * @deny (get) if !isSignedIn()
-     * @deny (create) if !isSignedIn()
-     * @deny (update) if !isSignedIn()
-     * @deny (delete) if !isSignedIn()
-     */
-    match /respostas_oficiais/{respostaOficialId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
-    }
-
-    /**
-     * @description Enforces that only authenticated users can read or write student answer data.
-     * @path /respostas_alunos/{respostaAlunoId}
-     * @allow (get, create, update, delete) if isSignedIn()
-     * @deny (get) if !isSignedIn()
-     * @deny (create) if !isSignedIn()
-     * @deny (update) if !isSignedIn()
-     * @deny (delete) if !isSignedIn()
-     */
-    match /respostas_alunos/{respostaAlunoId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
-    }
-
-    /**
-     * @description Enforces that only authenticated users can read or write correction data.
-     * @path /correcoes/{correcaoId}
-     * @allow (get, create, update, delete) if isSignedIn()
-     * @deny (get) if !isSignedIn()
-     * @deny (create) if !isSignedIn()
-     * @deny (update) if !isSignedIn()
-     * @deny (delete) if !isSignedIn()
-     */
-    match /correcoes/{correcaoId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
-    }
-
-    /**
-     * @description Enforces that only authenticated users can read or write result data.
-     * @path /resultados/{resultadoId}
-     * @allow (get, create, update, delete) if isSignedIn()
-     * @deny (get) if !isSignedIn()
-     * @deny (create) if !isSignedIn()
-     * @deny (update) if !isSignedIn()
-     * @deny (delete) if !isSignedIn()
-     */
-    match /resultados/{resultadoId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
-    }
-
-    // Helper functions
+   /**
+    * @description Allows authenticated users to read and write their own Aluno documents.
+    * @path /alunos/{alunoId}
+    * @allow (create) request.auth != null && request.resource.data.id == request.auth.uid
+    * @deny (create) request.auth == null
+    * @deny (update) request.auth.uid != resource.data.id
+    * @principle Enforces document ownership for all operations.
+    */
+   match /alunos/{alunoId} {
+    // Helper function to check if the user is signed in
     function isSignedIn() {
-      return request.auth != null;
+     return request.auth != null;
     }
+ 
 
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+    // Helper function to check if the user is the owner of the document
+    function isOwner(alunoId) {
+     return request.auth.uid == alunoId;
     }
+ 
 
-    function isExistingOwner(userId) {
-      return isSignedIn() && isOwner(userId) && resource != null;
+    //Helper function to check if the user is the existing owner of the document
+    function isExistingOwner(alunoId) {
+     return isOwner(alunoId) && resource != null;
     }
+ 
+
+    // Read permissions
+    allow get: if isSignedIn() && isOwner(alunoId);
+    allow list: if isSignedIn() && isOwner(alunoId);
+ 
+
+    // Write permissions
+    allow create: if isSignedIn() && isOwner(alunoId) && request.resource.data.id == alunoId;
+    allow update: if isExistingOwner(alunoId) && request.resource.data.id == resource.data.id;
+    allow delete: if isExistingOwner(alunoId);
+   }
+ 
+
+   /**
+    * @description Allows authenticated users to read and write their own Escola documents.
+    * @path /escolas/{escolaId}
+    * @allow (create) request.auth != null && request.resource.data.id == request.auth.uid
+    * @deny (create) request.auth == null
+    * @deny (update) request.auth.uid != resource.data.id
+    * @principle Enforces document ownership for all operations.
+    */
+   match /escolas/{escolaId} {
+    // Helper function to check if the user is signed in
+    function isSignedIn() {
+     return request.auth != null;
+    }
+ 
+
+    // Helper function to check if the user is the owner of the document
+    function isOwner(escolaId) {
+     return request.auth.uid == escolaId;
+    }
+ 
+
+    //Helper function to check if the user is the existing owner of the document
+    function isExistingOwner(escolaId) {
+     return isOwner(escolaId) && resource != null;
+    }
+ 
+
+    // Read permissions
+    allow get: if isSignedIn() && isOwner(escolaId);
+    allow list: if isSignedIn() && isOwner(escolaId);
+ 
+
+    // Write permissions
+    allow create: if isSignedIn() && isOwner(escolaId) && request.resource.data.id == escolaId;
+    allow update: if isExistingOwner(escolaId) && request.resource.data.id == resource.data.id;
+    allow delete: if isExistingOwner(escolaId);
+   }
+ 
+
+   /**
+    * @description Allows authenticated users to read and write their own Turma documents.
+    * @path /turmas/{turmaId}
+    * @allow (create) request.auth != null && request.resource.data.id == request.auth.uid
+    * @deny (create) request.auth == null
+    * @deny (update) request.auth.uid != resource.data.id
+    * @principle Enforces document ownership for all operations.
+    */
+   match /turmas/{turmaId} {
+    // Helper function to check if the user is signed in
+    function isSignedIn() {
+     return request.auth != null;
+    }
+ 
+
+    // Helper function to check if the user is the owner of the document
+    function isOwner(turmaId) {
+     return request.auth.uid == turmaId;
+    }
+ 
+
+    //Helper function to check if the user is the existing owner of the document
+    function isExistingOwner(turmaId) {
+     return isOwner(turmaId) && resource != null;
+    }
+ 
+
+    // Read permissions
+    allow get: if isSignedIn() && isOwner(turmaId);
+    allow list: if isSignedIn() && isOwner(turmaId);
+ 
+
+    // Write permissions
+    allow create: if isSignedIn() && isOwner(turmaId) && request.resource.data.id == turmaId;
+    allow update: if isExistingOwner(turmaId) && request.resource.data.id == resource.data.id;
+    allow delete: if isExistingOwner(turmaId);
+   }
+ 
+
+   /**
+    * @description Allows authenticated users to read and write their own Prova documents.
+    * @path /provas/{provaId}
+    * @allow (create) request.auth != null && request.resource.data.id == request.auth.uid
+    * @deny (create) request.auth == null
+    * @deny (update) request.auth.uid != resource.data.id
+    * @principle Enforces document ownership for all operations.
+    */
+   match /provas/{provaId} {
+    // Helper function to check if the user is signed in
+    function isSignedIn() {
+     return request.auth != null;
+    }
+ 
+
+    // Helper function to check if the user is the owner of the document
+    function isOwner(provaId) {
+     return request.auth.uid == provaId;
+    }
+ 
+
+    //Helper function to check if the user is the existing owner of the document
+    function isExistingOwner(provaId) {
+     return isOwner(provaId) && resource != null;
+    }
+ 
+
+    // Read permissions
+    allow get: if isSignedIn() && isOwner(provaId);
+    allow list: if isSignedIn() && isOwner(provaId);
+ 
+
+    // Write permissions
+    allow create: if isSignedIn() && isOwner(provaId) && request.resource.data.id == provaId;
+    allow update: if isExistingOwner(provaId) && request.resource.data.id == resource.data.id;
+    allow delete: if isExistingOwner(provaId);
+   }
+ 
+
+   /**
+    * @description Allows authenticated users to read and write their own Questao documents.
+    * @path /questoes/{questaoId}
+    * @allow (create) request.auth != null && request.resource.data.id == request.auth.uid
+    * @deny (create) request.auth == null
+    * @deny (update) request.auth.uid != resource.data.id
+    * @principle Enforces document ownership for all operations.
+    */
+   match /questoes/{questaoId} {
+    // Helper function to check if the user is signed in
+    function isSignedIn() {
+     return request.auth != null;
+    }
+ 
+
+    // Helper function to check if the user is the owner of the document
+    function isOwner(questaoId) {
+     return request.auth.uid == questaoId;
+    }
+ 
+
+    //Helper function to check if the user is the existing owner of the document
+    function isExistingOwner(questaoId) {
+     return isOwner(questaoId) && resource != null;
+    }
+ 
+
+    // Read permissions
+    allow get: if isSignedIn() && isOwner(questaoId);
+    allow list: if isSignedIn() && isOwner(questaoId);
+ 
+
+    // Write permissions
+    allow create: if isSignedIn() && isOwner(questaoId) && request.resource.data.id == questaoId;
+    allow update: if isExistingOwner(questaoId) && request.resource.data.id == resource.data.id;
+    allow delete: if isExistingOwner(questaoId);
+   }
+ 
+
+   /**
+    * @description Allows authenticated users to read and write their own RespostaOficial documents.
+    * @path /respostas_oficiais/{respostaOficialId}
+    * @allow (create) request.auth != null && request.resource.data.id == request.auth.uid
+    * @deny (create) request.auth == null
+    * @deny (update) request.auth.uid != resource.data.id
+    * @principle Enforces document ownership for all operations.
+    */
+   match /respostas_oficiais/{respostaOficialId} {
+    // Helper function to check if the user is signed in
+    function isSignedIn() {
+     return request.auth != null;
+    }
+ 
+
+    // Helper function to check if the user is the owner of the document
+    function isOwner(respostaOficialId) {
+     return request.auth.uid == respostaOficialId;
+    }
+ 
+
+    //Helper function to check if the user is the existing owner of the document
+    function isExistingOwner(respostaOficialId) {
+     return isOwner(respostaOficialId) && resource != null;
+    }
+ 
+
+    // Read permissions
+    allow get: if isSignedIn() && isOwner(respostaOficialId);
+    allow list: if isSignedIn() && isOwner(respostaOficialId);
+ 
+
+    // Write permissions
+    allow create: if isSignedIn() && isOwner(respostaOficialId) && request.resource.data.id == respostaOficialId;
+    allow update: if isExistingOwner(respostaOficialId) && request.resource.data.id == resource.data.id;
+    allow delete: if isExistingOwner(respostaOficialId);
+   }
+ 
+
+   /**
+    * @description Allows authenticated users to read and write their own RespostaAluno documents.
+    * @path /respostas_alunos/{respostaAlunoId}
+    * @allow (create) request.auth != null && request.resource.data.id == request.auth.uid
+    * @deny (create) request.auth == null
+    * @deny (update) request.auth.uid != resource.data.id
+    * @principle Enforces document ownership for all operations.
+    */
+   match /respostas_alunos/{respostaAlunoId} {
+    // Helper function to check if the user is signed in
+    function isSignedIn() {
+     return request.auth != null;
+    }
+ 
+
+    // Helper function to check if the user is the owner of the document
+    function isOwner(respostaAlunoId) {
+     return request.auth.uid == respostaAlunoId;
+    }
+ 
+
+    //Helper function to check if the user is the existing owner of the document
+    function isExistingOwner(respostaAlunoId) {
+     return isOwner(respostaAlunoId) && resource != null;
+    }
+ 
+
+    // Read permissions
+    allow get: if isSignedIn() && isOwner(respostaAlunoId);
+    allow list: if isSignedIn() && isOwner(respostaAlunoId);
+ 
+
+    // Write permissions
+    allow create: if isSignedIn() && isOwner(respostaAlunoId) && request.resource.data.id == respostaAlunoId;
+    allow update: if isExistingOwner(respostaAlunoId) && request.resource.data.id == resource.data.id;
+    allow delete: if isExistingOwner(respostaAlunoId);
+   }
+ 
+
+   /**
+    * @description Allows authenticated users to read and write their own Correcao documents.
+    * @path /correcoes/{correcaoId}
+    * @allow (create) request.auth != null && request.resource.data.id == request.auth.uid
+    * @deny (create) request.auth == null
+    * @deny (update) request.auth.uid != resource.data.id
+    * @principle Enforces document ownership for all operations.
+    */
+   match /correcoes/{correcaoId} {
+    // Helper function to check if the user is signed in
+    function isSignedIn() {
+     return request.auth != null;
+    }
+ 
+
+    // Helper function to check if the user is the owner of the document
+    function isOwner(correcaoId) {
+     return request.auth.uid == correcaoId;
+    }
+ 
+
+    //Helper function to check if the user is the existing owner of the document
+    function isExistingOwner(correcaoId) {
+     return isOwner(correcaoId) && resource != null;
+    }
+ 
+
+    // Read permissions
+    allow get: if isSignedIn() && isOwner(correcaoId);
+    allow list: if isSignedIn() && isOwner(correcaoId);
+ 
+
+    // Write permissions
+    allow create: if isSignedIn() && isOwner(correcaoId) && request.resource.data.id == correcaoId;
+    allow update: if isExistingOwner(correcaoId) && request.resource.data.id == resource.data.id;
+    allow delete: if isExistingOwner(correcaoId);
+   }
+ 
+
+   /**
+    * @description Allows authenticated users to read and write their own Resultado documents.
+    * @path /resultados/{resultadoId}
+    * @allow (create) request.auth != null && request.resource.data.id == request.auth.uid
+    * @deny (create) request.auth == null
+    * @deny (update) request.auth.uid != resource.data.id
+    * @principle Enforces document ownership for all operations.
+    */
+   match /resultados/{resultadoId} {
+    // Helper function to check if the user is signed in
+    function isSignedIn() {
+     return request.auth != null;
+    }
+ 
+
+    // Helper function to check if the user is the owner of the document
+    function isOwner(resultadoId) {
+     return request.auth.uid == resultadoId;
+    }
+ 
+
+    //Helper function to check if the user is the existing owner of the document
+    function isExistingOwner(resultadoId) {
+     return isOwner(resultadoId) && resource != null;
+    }
+ 
+
+    // Read permissions
+    allow get: if isSignedIn() && isOwner(resultadoId);
+    allow list: if isSignedIn() && isOwner(resultadoId);
+ 
+
+    // Write permissions
+    allow create: if isSignedIn() && isOwner(resultadoId) && request.resource.data.id == resultadoId;
+    allow update: if isExistingOwner(resultadoId) && request.resource.data.id == resource.data.id;
+    allow delete: if isExistingOwner(resultadoId);
+   }
   }
-}
+ }
