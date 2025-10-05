@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useFirestore, useDocument, useCollection } from '@/firebase';
+import { useFirestore, useDoc, useCollection } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { Prova, Aluno, Resultado } from '@/lib/types';
 import { Header } from '@/components/header';
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { CheckCircle, XCircle } from 'lucide-react';
 
 export default function CorrigirRapidoPage({ params }: { params: { id: string } }) {
@@ -19,15 +19,12 @@ export default function CorrigirRapidoPage({ params }: { params: { id: string } 
   const { toast } = useToast();
 
   const provaRef = doc(firestore, 'provas', params.id);
-  const { data: prova } = useDocument<Prova>(provaRef);
+  const { data: prova } = useDoc<Prova>(provaRef);
 
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [selectedAlunoId, setSelectedAlunoId] = useState<string>('');
   const [respostas, setRespostas] = useState<Record<string, string>>({});
   const [resultadoFinal, setResultadoFinal] = useState<{ acertos: number; erros: number; media: number; respostasSalvas: Record<string, string> } | null>(null);
-
-  const turmasCollection = collection(firestore, 'turmas');
-  const { data: turmasData } = useCollection(turmasCollection);
 
   const alunosCollection = collection(firestore, 'alunos');
   const { data: alunosData } = useCollection<Aluno>(alunosCollection);
@@ -44,7 +41,10 @@ export default function CorrigirRapidoPage({ params }: { params: { id: string } 
   };
 
   const handleCorrigir = async () => {
-    if (!prova || !prova.gabarito) return;
+    if (!prova || !prova.gabarito || !prova.numeroDeQuestoes) {
+        toast({ variant: 'destructive', title: 'Erro', description: 'A prova não tem um gabarito ou número de questões definido.' });
+        return;
+    }
     if (!selectedAlunoId) {
         toast({ variant: 'destructive', title: 'Erro', description: 'Por favor, selecione um aluno.' });
         return;
@@ -66,8 +66,7 @@ export default function CorrigirRapidoPage({ params }: { params: { id: string } 
     
     setResultadoFinal({ acertos, erros, media, respostasSalvas: respostas });
 
-    // Salvar no banco
-    const resultadoData: Partial<Resultado> = {
+    const resultadoData: Omit<Resultado, 'id'> = {
         alunoId: selectedAlunoId,
         provaId: params.id,
         acertos: acertos,
@@ -76,7 +75,6 @@ export default function CorrigirRapidoPage({ params }: { params: { id: string } 
         respostas: respostas
     };
     
-    // Usamos um ID customizado para evitar duplicatas
     const resultadoId = `${params.id}_${selectedAlunoId}`;
     const resultadoRef = doc(firestore, 'resultados', resultadoId);
 
@@ -120,17 +118,19 @@ export default function CorrigirRapidoPage({ params }: { params: { id: string } 
                             <span className='text-lg'>Erros: {resultadoFinal.erros}</span>
                         </div>
                     </div>
-                    <div className="border-t pt-4 mt-4">
-                        <h4 className='font-semibold mb-2'>Respostas do Aluno:</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                            {Object.entries(resultadoFinal.respostasSalvas).map(([q, r]) => (
-                                <div key={q} className={'p-2 rounded-md ' + (prova.gabarito[q] === r ? 'bg-green-100' : 'bg-red-100')}>
-                                    <strong>Questão {q}:</strong> {r}
-                                    <span className='text-xs ml-1'> (G: {prova.gabarito[q]})</span>
-                                </div>
-                            ))}
+                    {prova.gabarito && (
+                        <div className="border-t pt-4 mt-4">
+                            <h4 className='font-semibold mb-2'>Respostas do Aluno:</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                                {Object.entries(resultadoFinal.respostasSalvas).map(([q, r]) => (
+                                    <div key={q} className={`p-2 rounded-md ${prova.gabarito[q] === r ? 'bg-green-100' : 'bg-red-100'}`}>
+                                        <strong>Questão {q}:</strong> {r}
+                                        <span className='text-xs ml-1'> (G: {prova.gabarito[q]})</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
                     <div className='text-center mt-6'>
                        <Button onClick={handleNovoAluno}>Corrigir Prova de Outro Aluno</Button>
                     </div>
@@ -157,37 +157,39 @@ export default function CorrigirRapidoPage({ params }: { params: { id: string } 
                   </Select>
                 </div>
 
-                <div>
-                    <Label>Respostas do Aluno</Label>
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-4 mt-2 max-h-72 overflow-y-auto pr-4">
-                        {Array.from({ length: prova.numeroDeQuestoes }, (_, i) => i + 1).map((q) => (
-                            <div key={q} className="flex items-center gap-2">
-                                <Label htmlFor={`q-${q}`} className="min-w-[70px] text-right">
-                                    Questão {q}
-                                </Label>
-                                <Select
-                                    name={`resposta-${q}`}
-                                    value={respostas[q] || ''}
-                                    onValueChange={(value) => handleRespostaChange(q.toString(), value)}
-                                    required
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="-" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="A">A</SelectItem>
-                                        <SelectItem value="B">B</SelectItem>
-                                        <SelectItem value="C">C</SelectItem>
-                                        <SelectItem value="D">D</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        ))}
+                {prova.numeroDeQuestoes > 0 && (
+                    <div>
+                        <Label>Respostas do Aluno</Label>
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-4 mt-2 max-h-72 overflow-y-auto pr-4">
+                            {Array.from({ length: prova.numeroDeQuestoes }, (_, i) => i + 1).map((q) => (
+                                <div key={q} className="flex items-center gap-2">
+                                    <Label htmlFor={`q-${q}`} className="min-w-[70px] text-right">
+                                        Questão {q}
+                                    </Label>
+                                    <Select
+                                        name={`resposta-${q}`}
+                                        value={respostas[q] || ''}
+                                        onValueChange={(value) => handleRespostaChange(q.toString(), value)}
+                                        required
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="-" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="A">A</SelectItem>
+                                            <SelectItem value="B">B</SelectItem>
+                                            <SelectItem value="C">C</SelectItem>
+                                            <SelectItem value="D">D</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                </div>
+                )}
                 
                 <div className='text-center'>
-                  <Button onClick={handleCorrigir} size='lg'>Corrigir e Salvar Resultado</Button>
+                  <Button onClick={handleCorrigir} size='lg' disabled={!selectedAlunoId}>Corrigir e Salvar Resultado</Button>
                 </div>
               </CardContent>
             </Card>
