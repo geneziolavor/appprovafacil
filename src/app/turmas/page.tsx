@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -126,7 +127,7 @@ export default function TurmasPage() {
                     <Label htmlFor="escolaId" className="text-right">
                       Escola
                     </Label>
-                    <Select name="escolaId" defaultValue={editingTurma?.escolaId}>
+                    <Select name="escolaId" defaultValue={editingTurma?.escolaId} required>
                       <SelectTrigger className="col-span-3">
                         <SelectValue placeholder="Selecione uma escola" />
                       </SelectTrigger>

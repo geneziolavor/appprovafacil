@@ -126,7 +126,7 @@ export default function AlunosPage() {
                     <Label htmlFor="dataNascimento" className="text-right">
                       Data Nasc.
                     </Label>
-                    <Input id="dataNascimento" name="dataNascimento" type="date" defaultValue={editingAluno?.dataNascimento} className="col-span-3" required />
+                    <Input id="dataNascimento" name="dataNascimento" type="datetime-local" defaultValue={editingAluno?.dataNascimento} className="col-span-3" required />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="escolaId" className="text-right">
