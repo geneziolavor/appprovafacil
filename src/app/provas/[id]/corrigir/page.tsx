@@ -76,7 +76,7 @@ export default function CorrigirProvaPage() {
       toast({
         variant: 'destructive',
         title: 'Erro Detalhado da IA',
-        description: error.message || 'Um erro desconhecido ocorreu.',
+        description: JSON.stringify(error, Object.getOwnPropertyNames(error), 2) || 'Um erro desconhecido ocorreu.',
         duration: 9000,
       });
     } finally {
