@@ -76,7 +76,7 @@ export default function ProvasPage() {
     const formData = new FormData(event.currentTarget);
     const newProvaData = {
       titulo: formData.get('titulo') as string,
-      data: formData.get('data') as string,
+      dataAplicacao: formData.get('dataAplicacao') as string,
       turmaId: '1', // Mock
     };
 
@@ -117,10 +117,10 @@ export default function ProvasPage() {
                     <Input id="titulo" name="titulo" defaultValue={editingProva?.titulo} className="col-span-3" required />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="data" className="text-right">
+                    <Label htmlFor="dataAplicacao" className="text-right">
                       Data
                     </Label>
-                    <Input id="data" name="data" type="date" defaultValue={editingProva?.data} className="col-span-3" required />
+                    <Input id="dataAplicacao" name="dataAplicacao" type="date" defaultValue={editingProva?.dataAplicacao} className="col-span-3" required />
                   </div>
                 </div>
                 <DialogFooter>
@@ -151,7 +151,7 @@ export default function ProvasPage() {
                   {provas?.map(prova => (
                     <TableRow key={prova.id}>
                       <TableCell className="font-medium">{prova.titulo}</TableCell>
-                      <TableCell>{new Date(prova.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</TableCell>
+                      <TableCell>{new Date(prova.dataAplicacao).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</TableCell>
                       <TableCell>{getTurmaNome(prova.turmaId)}</TableCell>
                       <TableCell className="text-right space-x-1">
                         <Tooltip>

@@ -22,7 +22,7 @@ export type Turma = {
 export type Prova = {
   id: string;
   titulo: string;
-  data: string;
+  dataAplicacao: string;
   turmaId: string;
 };
 
