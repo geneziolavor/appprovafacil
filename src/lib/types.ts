@@ -24,6 +24,8 @@ export type Prova = {
   titulo: string;
   dataAplicacao: string;
   turmaId: string;
+  numeroDeQuestoes: number;
+  gabarito: Record<string, 'A' | 'B' | 'C' | 'D'>;
 };
 
 export type Questao = {
