@@ -65,4 +65,5 @@ export type Resultado = {
   acertos: number;
   erros: number;
   media: number;
+  respostas: Record<string, string>;
 };
