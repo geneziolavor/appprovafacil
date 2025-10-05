@@ -1,3 +1,5 @@
+'use client';
+
 import { Header } from "@/components/header";
 import { PageHeader } from "@/components/page-header";
 import { BarChart2, CheckCircle2, XCircle } from "lucide-react";
