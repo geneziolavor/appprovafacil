@@ -31,7 +31,12 @@ export type Questao = {
   provaId: string;
   numero: number;
   enunciado: string;
-  tipo: string;
+  tipo: 'multipla-escolha' | 'dissertativa';
+  alternativaA?: string;
+  alternativaB?: string;
+  alternativaC?: string;
+  alternativaD?: string;
+  alternativaCorreta?: 'A' | 'B' | 'C' | 'D';
 };
 
 export type RespostaOficial = {
@@ -56,3 +61,5 @@ export type Resultado = {
   erros: number;
   media: number;
 };
+
+    

@@ -37,6 +37,14 @@ import { useParams } from 'next/navigation';
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection, doc, query, where } from 'firebase/firestore';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 
 export default function QuestoesPage() {
   const params = useParams();
@@ -71,11 +79,16 @@ export default function QuestoesPage() {
   const handleSave = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const newQuestaoData = {
+    const newQuestaoData: Omit<Questao, 'id'> = {
       numero: Number(formData.get('numero')),
       enunciado: formData.get('enunciado') as string,
       provaId: provaId,
-      tipo: 'dissertativa', // Adding mock data for required field
+      tipo: 'multipla-escolha',
+      alternativaA: formData.get('alternativaA') as string,
+      alternativaB: formData.get('alternativaB') as string,
+      alternativaC: formData.get('alternativaC') as string,
+      alternativaD: formData.get('alternativaD') as string,
+      alternativaCorreta: formData.get('alternativaCorreta') as 'A' | 'B' | 'C' | 'D',
     };
 
     if (editingQuestao) {
@@ -110,7 +123,7 @@ export default function QuestoesPage() {
                 <Plus className="mr-2 h-4 w-4" /> Adicionar Questão
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-2xl">
               <DialogHeader>
                 <DialogTitle>{editingQuestao ? 'Editar Questão' : 'Adicionar Questão'}</DialogTitle>
                 <DialogDescription>
@@ -125,11 +138,51 @@ export default function QuestoesPage() {
                     </Label>
                     <Input id="numero" name="numero" type="number" defaultValue={editingQuestao?.numero} className="col-span-3" required />
                   </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="enunciado" className="text-right">
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label htmlFor="enunciado" className="text-right mt-2">
                       Enunciado
                     </Label>
                     <Textarea id="enunciado" name="enunciado" defaultValue={editingQuestao?.enunciado} className="col-span-3" required />
+                  </div>
+                   <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="alternativaA" className="text-right">
+                      Alternativa A
+                    </Label>
+                    <Input id="alternativaA" name="alternativaA" defaultValue={editingQuestao?.alternativaA} className="col-span-3" required />
+                  </div>
+                   <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="alternativaB" className="text-right">
+                      Alternativa B
+                    </Label>
+                    <Input id="alternativaB" name="alternativaB" defaultValue={editingQuestao?.alternativaB} className="col-span-3" required />
+                  </div>
+                   <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="alternativaC" className="text-right">
+                      Alternativa C
+                    </Label>
+                    <Input id="alternativaC" name="alternativaC" defaultValue={editingQuestao?.alternativaC} className="col-span-3" required />
+                  </div>
+                   <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="alternativaD" className="text-right">
+                      Alternativa D
+                    </Label>
+                    <Input id="alternativaD" name="alternativaD" defaultValue={editingQuestao?.alternativaD} className="col-span-3" required />
+                  </div>
+                   <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="alternativaCorreta" className="text-right">
+                      Correta
+                    </Label>
+                    <Select name="alternativaCorreta" defaultValue={editingQuestao?.alternativaCorreta} required>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Selecione a alternativa correta" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="A">A</SelectItem>
+                        <SelectItem value="B">B</SelectItem>
+                        <SelectItem value="C">C</SelectItem>
+                        <SelectItem value="D">D</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <DialogFooter>
@@ -150,15 +203,19 @@ export default function QuestoesPage() {
                 <TableRow>
                   <TableHead className="w-[100px]">Número</TableHead>
                   <TableHead>Enunciado</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="w-[150px]">Alt. Correta</TableHead>
+                  <TableHead className="text-right w-[100px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading && <TableRow><TableCell colSpan={3} className="text-center">Carregando...</TableCell></TableRow>}
+                {isLoading && <TableRow><TableCell colSpan={4} className="text-center">Carregando...</TableCell></TableRow>}
                 {questoes?.sort((a,b) => a.numero - b.numero).map(questao => (
                   <TableRow key={questao.id}>
                     <TableCell className="font-medium">{questao.numero}</TableCell>
                     <TableCell>{questao.enunciado}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{questao.alternativaCorreta}</Badge>
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(questao)}>
                         <Pencil className="h-4 w-4" />
@@ -177,3 +234,5 @@ export default function QuestoesPage() {
     </div>
   );
 }
+
+    

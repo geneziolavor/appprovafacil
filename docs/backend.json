@@ -137,7 +137,29 @@
         },
         "tipo": {
           "type": "string",
-          "description": "The type of question (e.g., multiple choice, true/false)."
+          "description": "The type of question (e.g., multiple choice, true/false).",
+          "enum": ["multipla-escolha", "dissertativa"]
+        },
+        "alternativaA": {
+          "type": "string",
+          "description": "Alternative A for a multiple choice question."
+        },
+        "alternativaB": {
+          "type": "string",
+          "description": "Alternative B for a multiple choice question."
+        },
+        "alternativaC": {
+          "type": "string",
+          "description": "Alternative C for a multiple choice question."
+        },
+        "alternativaD": {
+          "type": "string",
+          "description": "Alternative D for a multiple choice question."
+        },
+        "alternativaCorreta": {
+          "type": "string",
+          "description": "The correct alternative for a multiple choice question.",
+          "enum": ["A", "B", "C", "D"]
         }
       },
       "required": [
@@ -436,3 +458,4 @@
     "reasoning": "The Firestore structure is designed to directly mirror the data relationships defined in the entities, leveraging hierarchical paths for clear ownership and simplified security rules. Each entity gets its own top-level collection. Since all entities are essentially private data, path-based ownership is used.\n\n*   `/alunos`: Stores `Aluno` entities.\n*   `/escolas`: Stores `Escola` entities.\n*   `/turmas`: Stores `Turma` entities.\n*   `/provas`: Stores `Prova` entities.\n*   `/questoes`: Stores `Questao` entities.\n*   `/respostas_oficiais`: Stores `RespostaOficial` entities.\n*   `/respostas_alunos`: Stores `RespostaAluno` entities.\n*   `/correcoes`: Stores `Correcao` entities.\n*   `/resultados`: Stores `Resultado` entities.\n\nThis structure prioritizes simplicity and directness, aligning well with the application's CRUD-centric features. The absence of deeply nested subcollections keeps the structure manageable and facilitates efficient querying.\n\n**Authorization Independence**:  Since there are no complex authorization requirements (like shared documents with specific roles), denormalization is not required in this structure.  Each entity is directly accessible and manageable, simplifying security rules.\n\n**QAPs (Rules are not Filters)**: The segregated structure, where each entity type resides in its own collection, inherently supports secure `list` operations. Rules can be defined at the collection level to control access based on user roles or other criteria without needing to filter data within the rules themselves."
   }
 }
+    
