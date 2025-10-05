@@ -31,15 +31,23 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/page-header';
 import { Header } from '@/components/header';
-import { mockTurmas, mockEscolas } from '@/lib/data';
-import type { Turma } from '@/lib/types';
+import type { Turma, Escola } from '@/lib/types';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc } from 'firebase/firestore';
 
 export default function TurmasPage() {
-  const [turmas, setTurmas] = useState<Turma[]>(mockTurmas);
+  const firestore = useFirestore();
+  const turmasCollection = useMemoFirebase(() => collection(firestore, 'turmas'), [firestore]);
+  const { data: turmas, isLoading } = useCollection<Turma>(turmasCollection);
+  
+  const escolasCollection = useMemoFirebase(() => collection(firestore, 'escolas'), [firestore]);
+  const { data: escolas } = useCollection<Escola>(escolasCollection);
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTurma, setEditingTurma] = useState<Turma | null>(null);
 
-  const getEscolaNome = (id: string) => mockEscolas.find(e => e.id === id)?.nome || 'N/A';
+  const getEscolaNome = (id: string) => escolas?.find(e => e.id === id)?.nome || 'N/A';
 
   const handleEdit = (turma: Turma) => {
     setEditingTurma(turma);
@@ -47,7 +55,8 @@ export default function TurmasPage() {
   };
 
   const handleDelete = (id: string) => {
-    setTurmas(turmas.filter(t => t.id !== id));
+    const docRef = doc(firestore, 'turmas', id);
+    deleteDocumentNonBlocking(docRef);
   };
   
   const handleOpenDialog = () => {
@@ -65,9 +74,10 @@ export default function TurmasPage() {
     };
 
     if (editingTurma) {
-      setTurmas(turmas.map(t => t.id === editingTurma.id ? { ...t, ...newTurmaData } : t));
+      const docRef = doc(firestore, 'turmas', editingTurma.id);
+      setDocumentNonBlocking(docRef, newTurmaData, { merge: true });
     } else {
-      setTurmas([...turmas, { id: String(Date.now()), ...newTurmaData }]);
+      addDocumentNonBlocking(turmasCollection, newTurmaData);
     }
     setIsDialogOpen(false);
     setEditingTurma(null);
@@ -116,7 +126,7 @@ export default function TurmasPage() {
         <Card>
           <CardHeader>
             <CardTitle>Lista de Turmas</CardTitle>
-            <CardDescription>Total de {turmas.length} turmas.</CardDescription>
+            <CardDescription>Total de {turmas?.length || 0} turmas.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -129,7 +139,8 @@ export default function TurmasPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {turmas.map(turma => (
+                {isLoading && <TableRow><TableCell colSpan={4} className="text-center">Carregando...</TableCell></TableRow>}
+                {turmas?.map(turma => (
                   <TableRow key={turma.id}>
                     <TableCell className="font-medium">{turma.nome}</TableCell>
                     <TableCell>{turma.ano}</TableCell>

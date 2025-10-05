@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Plus, Pencil, Trash2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,16 +31,27 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/page-header';
 import { Header } from '@/components/header';
-import { mockAlunos, mockEscolas, mockTurmas } from '@/lib/data';
-import type { Aluno } from '@/lib/types';
+import type { Aluno, Escola, Turma } from '@/lib/types';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc } from 'firebase/firestore';
 
 export default function AlunosPage() {
-  const [alunos, setAlunos] = useState<Aluno[]>(mockAlunos);
+  const firestore = useFirestore();
+  const alunosCollection = useMemoFirebase(() => collection(firestore, 'alunos'), [firestore]);
+  const { data: alunos, isLoading } = useCollection<Aluno>(alunosCollection);
+
+  const escolasCollection = useMemoFirebase(() => collection(firestore, 'escolas'), [firestore]);
+  const { data: escolas } = useCollection<Escola>(escolasCollection);
+
+  const turmasCollection = useMemoFirebase(() => collection(firestore, 'turmas'), [firestore]);
+  const { data: turmas } = useCollection<Turma>(turmasCollection);
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAluno, setEditingAluno] = useState<Aluno | null>(null);
 
-  const getEscolaNome = (id: string) => mockEscolas.find(e => e.id === id)?.nome || 'N/A';
-  const getTurmaNome = (id: string) => mockTurmas.find(t => t.id === id)?.nome || 'N/A';
+  const getEscolaNome = (id: string) => escolas?.find(e => e.id === id)?.nome || 'N/A';
+  const getTurmaNome = (id: string) => turmas?.find(t => t.id === id)?.nome || 'N/A';
 
   const handleEdit = (aluno: Aluno) => {
     setEditingAluno(aluno);
@@ -48,7 +59,8 @@ export default function AlunosPage() {
   };
 
   const handleDelete = (id: string) => {
-    setAlunos(alunos.filter(a => a.id !== id));
+    const docRef = doc(firestore, 'alunos', id);
+    deleteDocumentNonBlocking(docRef);
   };
   
   const handleOpenDialog = () => {
@@ -61,15 +73,16 @@ export default function AlunosPage() {
     const formData = new FormData(event.currentTarget);
     const newAlunoData = {
       nome: formData.get('nome') as string,
-      email: formData.get('email') as string,
+      dataNascimento: formData.get('dataNascimento') as string,
       escolaId: '1', // Mock
       turmaId: '1', // Mock
     };
 
     if (editingAluno) {
-      setAlunos(alunos.map(a => a.id === editingAluno.id ? { ...a, ...newAlunoData } : a));
+      const docRef = doc(firestore, 'alunos', editingAluno.id);
+      setDocumentNonBlocking(docRef, newAlunoData, { merge: true });
     } else {
-      setAlunos([...alunos, { id: String(Date.now()), ...newAlunoData }]);
+      addDocumentNonBlocking(alunosCollection, newAlunoData);
     }
     setIsDialogOpen(false);
     setEditingAluno(null);
@@ -102,10 +115,10 @@ export default function AlunosPage() {
                     <Input id="nome" name="nome" defaultValue={editingAluno?.nome} className="col-span-3" required />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="email" className="text-right">
-                      Email
+                    <Label htmlFor="dataNascimento" className="text-right">
+                      Data Nasc.
                     </Label>
-                    <Input id="email" name="email" type="email" defaultValue={editingAluno?.email} className="col-span-3" required />
+                    <Input id="dataNascimento" name="dataNascimento" type="date" defaultValue={editingAluno?.dataNascimento} className="col-span-3" required />
                   </div>
                 </div>
                 <DialogFooter>
@@ -118,24 +131,25 @@ export default function AlunosPage() {
         <Card>
           <CardHeader>
             <CardTitle>Lista de Alunos</CardTitle>
-            <CardDescription>Total de {alunos.length} alunos.</CardDescription>
+            <CardDescription>Total de {alunos?.length || 0} alunos.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
-                  <TableHead>Email</TableHead>
+                  <TableHead>Data de Nascimento</TableHead>
                   <TableHead>Escola</TableHead>
                   <TableHead>Turma</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {alunos.map(aluno => (
+                {isLoading && <TableRow><TableCell colSpan={5} className="text-center">Carregando...</TableCell></TableRow>}
+                {alunos?.map(aluno => (
                   <TableRow key={aluno.id}>
                     <TableCell className="font-medium">{aluno.nome}</TableCell>
-                    <TableCell>{aluno.email}</TableCell>
+                    <TableCell>{new Date(aluno.dataNascimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</TableCell>
                     <TableCell>{getEscolaNome(aluno.escolaId)}</TableCell>
                     <TableCell>{getTurmaNome(aluno.turmaId)}</TableCell>
                     <TableCell className="text-right">

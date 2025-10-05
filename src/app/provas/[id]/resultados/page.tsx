@@ -3,16 +3,36 @@
 import { Header } from "@/components/header";
 import { PageHeader } from "@/components/page-header";
 import { BarChart2, CheckCircle2, XCircle } from "lucide-react";
-import { mockProvas, mockResultados } from "@/lib/data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResultsChart } from "@/components/results-chart";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { useCollection, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, doc, query, where } from "firebase/firestore";
+import type { Prova, Resultado } from "@/lib/types";
 
 export default function ResultadosPage({ params }: { params: { id: string } }) {
+  const firestore = useFirestore();
   const provaId = params.id;
-  const prova = mockProvas.find((p) => p.id === provaId);
-  const resultados = mockResultados.filter((r) => r.provaId === provaId);
+  
+  const provaDocRef = useMemoFirebase(() => doc(firestore, 'provas', provaId), [firestore, provaId]);
+  const { data: prova, isLoading: isProvaLoading } = useDoc<Prova>(provaDocRef);
+
+  const resultadosCollection = useMemoFirebase(() => collection(firestore, 'resultados'), [firestore]);
+  const resultadosQuery = useMemoFirebase(() => query(resultadosCollection, where('provaId', '==', provaId)), [resultadosCollection, provaId]);
+  const { data: resultados, isLoading: areResultadosLoading } = useCollection<Resultado>(resultadosQuery);
+  
+
+  if (isProvaLoading || areResultadosLoading) {
+    return (
+        <div className="flex min-h-screen w-full flex-col">
+            <Header />
+            <main className="flex-1 p-4 md:p-8 container mx-auto">
+            <PageHeader title="Carregando..." />
+            </main>
+        </div>
+    );
+  }
 
   if (!prova) {
     return (
@@ -24,11 +44,11 @@ export default function ResultadosPage({ params }: { params: { id: string } }) {
       </div>
     );
   }
-
-  const totalAcertos = resultados.reduce((sum, r) => sum + r.acertos, 0);
-  const totalErros = resultados.reduce((sum, r) => sum + r.erros, 0);
-  const totalQuestoes = resultados.length > 0 ? (resultados[0].acertos + resultados[0].erros) * resultados.length : 0;
-  const mediaGeral = resultados.length > 0 ? resultados.reduce((sum, r) => sum + r.media, 0) / resultados.length : 0;
+  
+  const totalAcertos = resultados?.reduce((sum, r) => sum + r.acertos, 0) || 0;
+  const totalErros = resultados?.reduce((sum, r) => sum + r.erros, 0) || 0;
+  const totalQuestoes = (resultados && resultados.length > 0) ? (resultados[0].acertos + resultados[0].erros) * resultados.length : 0;
+  const mediaGeral = (resultados && resultados.length > 0) ? resultados.reduce((sum, r) => sum + r.media, 0) / resultados.length : 0;
   
   const chartData = [
     { name: 'Acertos', value: totalAcertos, fill: 'hsl(var(--chart-2))' },
@@ -78,7 +98,7 @@ export default function ResultadosPage({ params }: { params: { id: string } }) {
                     <span className="text-muted-foreground">Nº</span>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{resultados.length}</div>
+                    <div className="text-2xl font-bold">{resultados?.length || 0}</div>
                     <p className="text-xs text-muted-foreground">Total de alunos que fizeram a prova</p>
                 </CardContent>
             </Card>
@@ -110,7 +130,8 @@ export default function ResultadosPage({ params }: { params: { id: string } }) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {resultados.map(r => (
+                            {areResultadosLoading && <TableRow><TableCell colSpan={4} className="text-center">Carregando...</TableCell></TableRow>}
+                            {resultados?.map(r => (
                                 <TableRow key={r.id}>
                                     <TableCell className="font-medium">Aluno ID: {r.alunoId}</TableCell>
                                     <TableCell>{r.acertos}</TableCell>

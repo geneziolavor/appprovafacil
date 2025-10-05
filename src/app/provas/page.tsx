@@ -32,21 +32,29 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/page-header';
 import { Header } from '@/components/header';
-import { mockProvas, mockTurmas } from '@/lib/data';
-import type { Prova } from '@/lib/types';
+import type { Prova, Turma } from '@/lib/types';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function ProvasPage() {
-  const [provas, setProvas] = useState<Prova[]>(mockProvas);
+  const firestore = useFirestore();
+  const provasCollection = useMemoFirebase(() => collection(firestore, 'provas'), [firestore]);
+  const { data: provas, isLoading } = useCollection<Prova>(provasCollection);
+
+  const turmasCollection = useMemoFirebase(() => collection(firestore, 'turmas'), [firestore]);
+  const { data: turmas } = useCollection<Turma>(turmasCollection);
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProva, setEditingProva] = useState<Prova | null>(null);
 
-  const getTurmaNome = (id: string) => mockTurmas.find(t => t.id === id)?.nome || 'N/A';
+  const getTurmaNome = (id: string) => turmas?.find(t => t.id === id)?.nome || 'N/A';
   
   const handleEdit = (prova: Prova) => {
     setEditingProva(prova);
@@ -54,7 +62,8 @@ export default function ProvasPage() {
   };
 
   const handleDelete = (id: string) => {
-    setProvas(provas.filter(p => p.id !== id));
+    const docRef = doc(firestore, 'provas', id);
+    deleteDocumentNonBlocking(docRef);
   };
 
   const handleOpenDialog = () => {
@@ -72,9 +81,10 @@ export default function ProvasPage() {
     };
 
     if (editingProva) {
-      setProvas(provas.map(p => p.id === editingProva.id ? { ...p, ...newProvaData } : p));
+      const docRef = doc(firestore, 'provas', editingProva.id);
+      setDocumentNonBlocking(docRef, newProvaData, { merge: true });
     } else {
-      setProvas([...provas, { id: String(Date.now()), ...newProvaData }]);
+      addDocumentNonBlocking(provasCollection, newProvaData);
     }
     setIsDialogOpen(false);
     setEditingProva(null);
@@ -123,7 +133,7 @@ export default function ProvasPage() {
         <Card>
           <CardHeader>
             <CardTitle>Lista de Provas</CardTitle>
-            <CardDescription>Total de {provas.length} provas.</CardDescription>
+            <CardDescription>Total de {provas?.length || 0} provas.</CardDescription>
           </CardHeader>
           <CardContent>
             <TooltipProvider>
@@ -137,7 +147,8 @@ export default function ProvasPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {provas.map(prova => (
+                  {isLoading && <TableRow><TableCell colSpan={4} className="text-center">Carregando...</TableCell></TableRow>}
+                  {provas?.map(prova => (
                     <TableRow key={prova.id}>
                       <TableCell className="font-medium">{prova.titulo}</TableCell>
                       <TableCell>{new Date(prova.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</TableCell>

@@ -32,16 +32,24 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { PageHeader } from '@/components/page-header';
 import { Header } from '@/components/header';
-import { mockQuestoes, mockProvas } from '@/lib/data';
-import type { Questao } from '@/lib/types';
+import type { Questao, Prova } from '@/lib/types';
 import { useParams } from 'next/navigation';
+import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc, query, where } from 'firebase/firestore';
 
 export default function QuestoesPage() {
   const params = useParams();
+  const firestore = useFirestore();
   const provaId = params.id as string;
-  const prova = mockProvas.find(p => p.id === provaId);
   
-  const [questoes, setQuestoes] = useState<Questao[]>(mockQuestoes.filter(q => q.provaId === provaId));
+  const provaDocRef = useMemoFirebase(() => doc(firestore, 'provas', provaId), [firestore, provaId]);
+  const { data: prova } = useDoc<Prova>(provaDocRef);
+
+  const questoesCollection = useMemoFirebase(() => collection(firestore, 'questoes'), [firestore]);
+  const questoesQuery = useMemoFirebase(() => query(questoesCollection, where('provaId', '==', provaId)), [questoesCollection, provaId]);
+  const { data: questoes, isLoading } = useCollection<Questao>(questoesQuery);
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingQuestao, setEditingQuestao] = useState<Questao | null>(null);
 
@@ -51,7 +59,8 @@ export default function QuestoesPage() {
   };
 
   const handleDelete = (id: string) => {
-    setQuestoes(questoes.filter(q => q.id !== id));
+    const docRef = doc(firestore, 'questoes', id);
+    deleteDocumentNonBlocking(docRef);
   };
   
   const handleOpenDialog = () => {
@@ -69,15 +78,16 @@ export default function QuestoesPage() {
     };
 
     if (editingQuestao) {
-      setQuestoes(questoes.map(q => q.id === editingQuestao.id ? { ...q, ...newQuestaoData } : q));
+      const docRef = doc(firestore, 'questoes', editingQuestao.id);
+      setDocumentNonBlocking(docRef, newQuestaoData, { merge: true });
     } else {
-      setQuestoes([...questoes, { id: String(Date.now()), ...newQuestaoData }]);
+      addDocumentNonBlocking(questoesCollection, newQuestaoData);
     }
     setIsDialogOpen(false);
     setEditingQuestao(null);
   };
 
-  if (!prova) {
+  if (!prova && !isLoading) {
     return (
       <div className="flex min-h-screen w-full flex-col">
         <Header />
@@ -92,7 +102,7 @@ export default function QuestoesPage() {
     <div className="flex min-h-screen w-full flex-col">
       <Header />
       <main className="flex-1 p-4 md:p-8 container mx-auto">
-        <PageHeader title={`Questões da Prova: ${prova.titulo}`} description="Gerencie as questões da prova." icon={ListChecks}>
+        <PageHeader title={`Questões da Prova: ${prova?.titulo || '...'}`} description="Gerencie as questões da prova." icon={ListChecks}>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={handleOpenDialog}>
@@ -131,7 +141,7 @@ export default function QuestoesPage() {
         <Card>
           <CardHeader>
             <CardTitle>Lista de Questões</CardTitle>
-            <CardDescription>Total de {questoes.length} questões.</CardDescription>
+            <CardDescription>Total de {questoes?.length || 0} questões.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -143,7 +153,8 @@ export default function QuestoesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {questoes.sort((a,b) => a.numero - b.numero).map(questao => (
+                {isLoading && <TableRow><TableCell colSpan={3} className="text-center">Carregando...</TableCell></TableRow>}
+                {questoes?.sort((a,b) => a.numero - b.numero).map(questao => (
                   <TableRow key={questao.id}>
                     <TableCell className="font-medium">{questao.numero}</TableCell>
                     <TableCell>{questao.enunciado}</TableCell>

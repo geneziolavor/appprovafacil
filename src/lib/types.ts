@@ -1,7 +1,7 @@
 export type Aluno = {
   id: string;
   nome: string;
-  email: string;
+  dataNascimento: string;
   escolaId: string;
   turmaId:string;
 };
@@ -9,7 +9,7 @@ export type Aluno = {
 export type Escola = {
   id: string;
   nome: string;
-  cidade: string;
+  endereco: string;
 };
 
 export type Turma = {

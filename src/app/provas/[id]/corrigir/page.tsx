@@ -11,15 +11,21 @@ import { Label } from '@/components/ui/label';
 import { Header } from '@/components/header';
 import { PageHeader } from '@/components/page-header';
 import { useToast } from '@/hooks/use-toast';
-import { mockProvas } from '@/lib/data';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc, collection, addDoc } from 'firebase/firestore';
+import type { Prova } from '@/lib/types';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function CorrigirProvaPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
+  const firestore = useFirestore();
   const provaId = params.id as string;
-  const prova = mockProvas.find(p => p.id === provaId);
+  
+  const provaDocRef = useMemoFirebase(() => doc(firestore, 'provas', provaId), [firestore, provaId]);
+  const { data: prova, isLoading: isProvaLoading } = useDoc<Prova>(provaDocRef);
 
   const [studentSheet, setStudentSheet] = useState<File | null>(null);
   const [answerKey, setAnswerKey] = useState<File | null>(null);
@@ -77,13 +83,49 @@ export default function CorrigirProvaPage() {
     }
   };
   
-  const handleSaveAndRedirect = () => {
-    // Here you would typically save the result to your database
+  const handleSaveAndRedirect = async () => {
+    if (!result) return;
+    
+    // Save corrections
+    const correcoesCollection = collection(firestore, 'correcoes');
+    for (const correction of result.corrections) {
+      const correcaoData = {
+        alunoId: 'mock-student-01',
+        provaId: provaId,
+        questaoId: correction.questionId,
+        correto: correction.correct,
+        dataCorrecao: new Date().toISOString(),
+      };
+      await addDoc(correcoesCollection, correcaoData);
+    }
+    
+    // Save results
+    const resultadosCollection = collection(firestore, 'resultados');
+    const resultadoData = {
+        alunoId: 'mock-student-01',
+        provaId: provaId,
+        acertos: result.results.correctCount,
+        erros: result.results.incorrectCount,
+        media: result.results.accuracy,
+    };
+    addDocumentNonBlocking(resultadosCollection, resultadoData)
+
     toast({
         title: 'Resultados Salvos!',
         description: `Navegando para a página de resultados.`,
     });
     router.push(`/provas/${provaId}/resultados`);
+  }
+
+  if (isProvaLoading) {
+    return (
+        <div className="flex min-h-screen w-full flex-col">
+            <Header />
+            <main className="flex-1 p-4 md:p-8 container mx-auto">
+            <PageHeader title="Carregando..." />
+            </main>
+        </div>
+    );
   }
 
   if (!prova) {

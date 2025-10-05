@@ -31,11 +31,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PageHeader } from '@/components/page-header';
 import { Header } from '@/components/header';
-import { mockEscolas } from '@/lib/data';
 import type { Escola } from '@/lib/types';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc } from 'firebase/firestore';
 
 export default function EscolasPage() {
-  const [escolas, setEscolas] = useState<Escola[]>(mockEscolas);
+  const firestore = useFirestore();
+  const escolasCollection = useMemoFirebase(() => collection(firestore, 'escolas'), [firestore]);
+  const { data: escolas, isLoading } = useCollection<Escola>(escolasCollection);
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEscola, setEditingEscola] = useState<Escola | null>(null);
 
@@ -45,7 +50,8 @@ export default function EscolasPage() {
   };
 
   const handleDelete = (id: string) => {
-    setEscolas(escolas.filter(e => e.id !== id));
+    const docRef = doc(firestore, 'escolas', id);
+    deleteDocumentNonBlocking(docRef);
   };
 
   const handleOpenDialog = () => {
@@ -58,13 +64,14 @@ export default function EscolasPage() {
     const formData = new FormData(event.currentTarget);
     const newEscolaData = {
       nome: formData.get('nome') as string,
-      cidade: formData.get('cidade') as string,
+      endereco: formData.get('endereco') as string,
     };
 
     if (editingEscola) {
-      setEscolas(escolas.map(e => e.id === editingEscola.id ? { ...e, ...newEscolaData } : e));
+      const docRef = doc(firestore, 'escolas', editingEscola.id);
+      setDocumentNonBlocking(docRef, newEscolaData, { merge: true });
     } else {
-      setEscolas([...escolas, { id: String(Date.now()), ...newEscolaData }]);
+      addDocumentNonBlocking(escolasCollection, newEscolaData);
     }
     setIsDialogOpen(false);
     setEditingEscola(null);
@@ -97,10 +104,10 @@ export default function EscolasPage() {
                     <Input id="nome" name="nome" defaultValue={editingEscola?.nome} className="col-span-3" required />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="cidade" className="text-right">
-                      Cidade
+                    <Label htmlFor="endereco" className="text-right">
+                      Endereço
                     </Label>
-                    <Input id="cidade" name="cidade" defaultValue={editingEscola?.cidade} className="col-span-3" required />
+                    <Input id="endereco" name="endereco" defaultValue={editingEscola?.endereco} className="col-span-3" required />
                   </div>
                 </div>
                 <DialogFooter>
@@ -113,22 +120,23 @@ export default function EscolasPage() {
         <Card>
           <CardHeader>
             <CardTitle>Lista de Escolas</CardTitle>
-            <CardDescription>Total de {escolas.length} escolas.</CardDescription>
+            <CardDescription>Total de {escolas?.length || 0} escolas.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
-                  <TableHead>Cidade</TableHead>
+                  <TableHead>Endereço</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {escolas.map(escola => (
+                {isLoading && <TableRow><TableCell colSpan={3} className="text-center">Carregando...</TableCell></TableRow>}
+                {escolas?.map(escola => (
                   <TableRow key={escola.id}>
                     <TableCell className="font-medium">{escola.nome}</TableCell>
-                    <TableCell>{escola.cidade}</TableCell>
+                    <TableCell>{escola.endereco}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(escola)}>
                         <Pencil className="h-4 w-4" />
