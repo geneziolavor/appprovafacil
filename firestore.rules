@@ -1,214 +1,22 @@
 /**
- * @fileoverview Firestore Security Rules for Prototyping.
+ * @fileOverview Firestore Security Rules for the application.
  *
  * Core Philosophy:
- * This ruleset enforces a strict owner-only access model for all top-level collections.
- * This is a secure-by-default posture that restricts all data access to the owner of each document.
- * Data validation is relaxed to allow for rapid prototyping and schema iteration.
+ * This ruleset enforces a strict owner-only access model for all collections. Only the authenticated user whose ID matches the document ID in a given collection can read, create, update, or delete documents in that collection.
  *
  * Data Structure:
- * All data resides in top-level collections, with each document identified by a unique ID.
- * The data model includes entities for alunos, escolas, turmas, provas, questões, respostas (official and aluno), correções, and resultados.
+ * The Firestore database consists of top-level collections for each entity: `/alunos`, `/escolas`, `/turmas`, `/provas`, `/questoes`, `/respostas_oficiais`, `/respostas_alunos`, `/correcoes`, and `/resultados`. Each document within these collections is identified by its unique ID.
  *
  * Key Security Decisions:
- * All listing of documents is denied by default. This prevents information leakage and forces developers to explicitly enable listing where required.
- * Write access is strictly controlled by ownership. Only the owner of a document can create, update, or delete it.
- *
- * Authorization Independence:
- * No data denormalization is used for authorization, each entity is directly accessible and manageable, simplifying security rules.
+ * - **Owner-Only Access**: All data is considered private, and access is restricted to the owner (i.e., the user whose ID matches the document ID).
+ * - **No Public Listing**: Listing of documents is only allowed for the owner.
+ * - **Self-Creation**: A user can create their own root document by ensuring the document ID matches their `auth.uid`.
+ * - **Prototyping Mode**: Data validation is relaxed to allow for rapid schema iteration. Only authorization-critical fields are validated.
+ * - **Auditable and Maintainable Logic**: Complex logic is abstracted into helper functions for clarity.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    /**
-     * @description Controls access to the 'alunos' collection.
-     * @path /alunos/{alunoId}
-     * @allow (create) Allow the user with UID "alunoId" to create a new aluno document with alunoId as the value for the "id" field.
-     * @allow (get) Allow the user with UID "alunoId" to get the aluno document with ID "alunoId".
-     * @allow (update) Allow the user with UID "alunoId" to update the aluno document with ID "alunoId" if it exists.
-     * @allow (delete) Allow the user with UID "alunoId" to delete the aluno document with ID "alunoId" if it exists.
-     * @deny (create) Deny the user with UID "otherUserId" from creating an aluno document with ID "alunoId".
-     * @deny (get) Deny the user with UID "otherUserId" from getting the aluno document with ID "alunoId".
-     * @deny (update) Deny the user with UID "otherUserId" from updating the aluno document with ID "alunoId".
-     * @deny (delete) Deny the user with UID "otherUserId" from deleting the aluno document with ID "alunoId".
-     * @principle Enforces document ownership for all operations on aluno documents.
-     */
-    match /alunos/{alunoId} {
-      allow get: if isOwner(alunoId);
-      allow list: if false;
-      allow create: if isOwner(alunoId) && request.resource.data.id == alunoId;
-      allow update: if isExistingOwner(alunoId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(alunoId);
-    }
-
-    /**
-     * @description Controls access to the 'escolas' collection.
-     * @path /escolas/{escolaId}
-     * @allow (create) Allow the user with UID "escolaId" to create a new escola document with escolaId as the value for the "id" field.
-     * @allow (get) Allow the user with UID "escolaId" to get the escola document with ID "escolaId".
-     * @allow (update) Allow the user with UID "escolaId" to update the escola document with ID "escolaId" if it exists.
-     * @allow (delete) Allow the user with UID "escolaId" to delete the escola document with ID "escolaId" if it exists.
-     * @deny (create) Deny the user with UID "otherUserId" from creating an escola document with ID "escolaId".
-     * @deny (get) Deny the user with UID "otherUserId" from getting the escola document with ID "escolaId".
-     * @deny (update) Deny the user with UID "otherUserId" from updating the escola document with ID "escolaId".
-     * @deny (delete) Deny the user with UID "otherUserId" from deleting the escola document with ID "escolaId".
-     * @principle Enforces document ownership for all operations on escola documents.
-     */
-    match /escolas/{escolaId} {
-      allow get: if isOwner(escolaId);
-      allow list: if false;
-      allow create: if isOwner(escolaId) && request.resource.data.id == escolaId;
-      allow update: if isExistingOwner(escolaId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(escolaId);
-    }
-
-    /**
-     * @description Controls access to the 'turmas' collection.
-     * @path /turmas/{turmaId}
-     * @allow (create) Allow the user with UID "turmaId" to create a new turma document with turmaId as the value for the "id" field.
-     * @allow (get) Allow the user with UID "turmaId" to get the turma document with ID "turmaId".
-     * @allow (update) Allow the user with UID "turmaId" to update the turma document with ID "turmaId" if it exists.
-     * @allow (delete) Allow the user with UID "turmaId" to delete the turma document with ID "turmaId" if it exists.
-     * @deny (create) Deny the user with UID "otherUserId" from creating a turma document with ID "turmaId".
-     * @deny (get) Deny the user with UID "otherUserId" from getting the turma document with ID "turmaId".
-     * @deny (update) Deny the user with UID "otherUserId" from updating the turma document with ID "turmaId".
-     * @deny (delete) Deny the user with UID "otherUserId" from deleting the turma document with ID "turmaId".
-     * @principle Enforces document ownership for all operations on turma documents.
-     */
-    match /turmas/{turmaId} {
-      allow get: if isOwner(turmaId);
-      allow list: if false;
-      allow create: if isOwner(turmaId) && request.resource.data.id == turmaId;
-      allow update: if isExistingOwner(turmaId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(turmaId);
-    }
-
-    /**
-     * @description Controls access to the 'provas' collection.
-     * @path /provas/{provaId}
-     * @allow (create) Allow the user with UID "provaId" to create a new prova document with provaId as the value for the "id" field.
-     * @allow (get) Allow the user with UID "provaId" to get the prova document with ID "provaId".
-     * @allow (update) Allow the user with UID "provaId" to update the prova document with ID "provaId" if it exists.
-     * @allow (delete) Allow the user with UID "provaId" to delete the prova document with ID "provaId" if it exists.
-     * @deny (create) Deny the user with UID "otherUserId" from creating a prova document with ID "provaId".
-     * @deny (get) Deny the user with UID "otherUserId" from getting the prova document with ID "provaId".
-     * @deny (update) Deny the user with UID "otherUserId" from updating the prova document with ID "provaId".
-     * @deny (delete) Deny the user with UID "otherUserId" from deleting the prova document with ID "provaId".
-     * @principle Enforces document ownership for all operations on prova documents.
-     */
-    match /provas/{provaId} {
-      allow get: if isOwner(provaId);
-      allow list: if false;
-      allow create: if isOwner(provaId) && request.resource.data.id == provaId;
-      allow update: if isExistingOwner(provaId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(provaId);
-    }
-
-    /**
-     * @description Controls access to the 'questoes' collection.
-     * @path /questoes/{questaoId}
-     * @allow (create) Allow the user with UID "questaoId" to create a new questao document with questaoId as the value for the "id" field.
-     * @allow (get) Allow the user with UID "questaoId" to get the questao document with ID "questaoId".
-     * @allow (update) Allow the user with UID "questaoId" to update the questao document with ID "questaoId" if it exists.
-     * @allow (delete) Allow the user with UID "questaoId" to delete the questao document with ID "questaoId" if it exists.
-     * @deny (create) Deny the user with UID "otherUserId" from creating a questao document with ID "questaoId".
-     * @deny (get) Deny the user with UID "otherUserId" from getting the questao document with ID "questaoId".
-     * @deny (update) Deny the user with UID "otherUserId" from updating the questao document with ID "questaoId".
-     * @deny (delete) Deny the user with UID "otherUserId" from deleting the questao document with ID "questaoId".
-     * @principle Enforces document ownership for all operations on questao documents.
-     */
-    match /questoes/{questaoId} {
-      allow get: if isOwner(questaoId);
-      allow list: if false;
-      allow create: if isOwner(questaoId) && request.resource.data.id == questaoId;
-      allow update: if isExistingOwner(questaoId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(questaoId);
-    }
-
-    /**
-     * @description Controls access to the 'respostas_oficiais' collection.
-     * @path /respostas_oficiais/{respostaOficialId}
-     * @allow (create) Allow the user with UID "respostaOficialId" to create a new respostaOficial document with respostaOficialId as the value for the "id" field.
-     * @allow (get) Allow the user with UID "respostaOficialId" to get the respostaOficial document with ID "respostaOficialId".
-     * @allow (update) Allow the user with UID "respostaOficialId" to update the respostaOficial document with ID "respostaOficialId" if it exists.
-     * @allow (delete) Allow the user with UID "respostaOficialId" to delete the respostaOficial document with ID "respostaOficialId" if it exists.
-     * @deny (create) Deny the user with UID "otherUserId" from creating a respostaOficial document with ID "respostaOficialId".
-     * @deny (get) Deny the user with UID "otherUserId" from getting the respostaOficial document with ID "respostaOficialId".
-     * @deny (update) Deny the user with UID "otherUserId" from updating the respostaOficial document with ID "respostaOficialId".
-     * @deny (delete) Deny the user with UID "otherUserId" from deleting the respostaOficial document with ID "respostaOficialId".
-     * @principle Enforces document ownership for all operations on respostaOficial documents.
-     */
-    match /respostas_oficiais/{respostaOficialId} {
-      allow get: if isOwner(respostaOficialId);
-      allow list: if false;
-      allow create: if isOwner(respostaOficialId) && request.resource.data.id == respostaOficialId;
-      allow update: if isExistingOwner(respostaOficialId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(respostaOficialId);
-    }
-
-    /**
-     * @description Controls access to the 'respostas_alunos' collection.
-     * @path /respostas_alunos/{respostaAlunoId}
-     * @allow (create) Allow the user with UID "respostaAlunoId" to create a new respostaAluno document with respostaAlunoId as the value for the "id" field.
-     * @allow (get) Allow the user with UID "respostaAlunoId" to get the respostaAluno document with ID "respostaAlunoId".
-     * @allow (update) Allow the user with UID "respostaAlunoId" to update the respostaAluno document with ID "respostaAlunoId" if it exists.
-     * @allow (delete) Allow the user with UID "respostaAlunoId" to delete the respostaAluno document with ID "respostaAlunoId" if it exists.
-     * @deny (create) Deny the user with UID "otherUserId" from creating a respostaAluno document with ID "respostaAlunoId".
-     * @deny (get) Deny the user with UID "otherUserId" from getting the respostaAluno document with ID "respostaAlunoId".
-     * @deny (update) Deny the user with UID "otherUserId" from updating the respostaAluno document with ID "respostaAlunoId".
-     * @deny (delete) Deny the user with UID "otherUserId" from deleting the respostaAluno document with ID "respostaAlunoId".
-     * @principle Enforces document ownership for all operations on respostaAluno documents.
-     */
-    match /respostas_alunos/{respostaAlunoId} {
-      allow get: if isOwner(respostaAlunoId);
-      allow list: if false;
-      allow create: if isOwner(respostaAlunoId) && request.resource.data.id == respostaAlunoId;
-      allow update: if isExistingOwner(respostaAlunoId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(respostaAlunoId);
-    }
-
-    /**
-     * @description Controls access to the 'correcoes' collection.
-     * @path /correcoes/{correcaoId}
-     * @allow (create) Allow the user with UID "correcaoId" to create a new correcao document with correcaoId as the value for the "id" field.
-     * @allow (get) Allow the user with UID "correcaoId" to get the correcao document with ID "correcaoId".
-     * @allow (update) Allow the user with UID "correcaoId" to update the correcao document with ID "correcaoId" if it exists.
-     * @allow (delete) Allow the user with UID "correcaoId" to delete the correcao document with ID "correcaoId" if it exists.
-     * @deny (create) Deny the user with UID "otherUserId" from creating a correcao document with ID "correcaoId".
-     * @deny (get) Deny the user with UID "otherUserId" from getting the correcao document with ID "correcaoId".
-     * @deny (update) Deny the user with UID "otherUserId" from updating the correcao document with ID "correcaoId".
-     * @deny (delete) Deny the user with UID "otherUserId" from deleting the correcao document with ID "correcaoId".
-     * @principle Enforces document ownership for all operations on correcao documents.
-     */
-    match /correcoes/{correcaoId} {
-      allow get: if isOwner(correcaoId);
-      allow list: if false;
-      allow create: if isOwner(correcaoId) && request.resource.data.id == correcaoId;
-      allow update: if isExistingOwner(correcaoId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(correcaoId);
-    }
-
-    /**
-     * @description Controls access to the 'resultados' collection.
-     * @path /resultados/{resultadoId}
-     * @allow (create) Allow the user with UID "resultadoId" to create a new resultado document with resultadoId as the value for the "id" field.
-     * @allow (get) Allow the user with UID "resultadoId" to get the resultado document with ID "resultadoId".
-     * @allow (update) Allow the user with UID "resultadoId" to update the resultado document with ID "resultadoId" if it exists.
-     * @allow (delete) Allow the user with UID "resultadoId" to delete the resultado document with ID "resultadoId" if it exists.
-     * @deny (create) Deny the user with UID "otherUserId" from creating a resultado document with ID "resultadoId".
-     * @deny (get) Deny the user with UID "otherUserId" from getting the resultado document with ID "resultadoId".
-     * @deny (update) Deny the user with UID "otherUserId" from updating the resultado document with ID "resultadoId".
-     * @deny (delete) Deny the user with UID "otherUserId" from deleting the resultado document with ID "resultadoId".
-     * @principle Enforces document ownership for all operations on resultado documents.
-     */
-    match /resultados/{resultadoId} {
-      allow get: if isOwner(resultadoId);
-      allow list: if false;
-      allow create: if isOwner(resultadoId) && request.resource.data.id == resultadoId;
-      allow update: if isExistingOwner(resultadoId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(resultadoId);
-    }
 
     function isSignedIn() {
       return request.auth != null;
@@ -219,7 +27,160 @@ service cloud.firestore {
     }
 
     function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Enforces owner-only access for the 'alunos' collection.
+     * @path /databases/{database}/documents/alunos/{alunoId}
+     * @allow (create) User with UID 'aluno123' can create a new aluno document with ID 'aluno123'.
+     * @allow (get, update, delete) User with UID 'aluno123' can get, update or delete the aluno document with ID 'aluno123'.
+     * @deny (create) User with UID 'otherUser' cannot create a new aluno document with ID 'aluno123'.
+     * @deny (get, update, delete) User with UID 'otherUser' cannot get, update or delete the aluno document with ID 'aluno123'.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     */
+    match /alunos/{alunoId} {
+      allow get: if isOwner(alunoId);
+      allow list: if isOwner(alunoId);
+      allow create: if isOwner(alunoId) && request.resource.data.id == alunoId;
+      allow update: if isExistingOwner(alunoId) && resource.data.id == alunoId;
+      allow delete: if isExistingOwner(alunoId);
+    }
+
+    /**
+     * @description Enforces owner-only access for the 'escolas' collection.
+     * @path /databases/{database}/documents/escolas/{escolaId}
+     * @allow (create) User with UID 'escola123' can create a new escola document with ID 'escola123'.
+     * @allow (get, update, delete) User with UID 'escola123' can get, update or delete the escola document with ID 'escola123'.
+     * @deny (create) User with UID 'otherUser' cannot create a new escola document with ID 'escola123'.
+     * @deny (get, update, delete) User with UID 'otherUser' cannot get, update or delete the escola document with ID 'escola123'.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     */
+    match /escolas/{escolaId} {
+      allow get: if isOwner(escolaId);
+      allow list: if isOwner(escolaId);
+      allow create: if isOwner(escolaId) && request.resource.data.id == escolaId;
+      allow update: if isExistingOwner(escolaId) && resource.data.id == escolaId;
+      allow delete: if isExistingOwner(escolaId);
+    }
+
+    /**
+     * @description Enforces owner-only access for the 'turmas' collection.
+     * @path /databases/{database}/documents/turmas/{turmaId}
+     * @allow (create) User with UID 'turma123' can create a new turma document with ID 'turma123'.
+     * @allow (get, update, delete) User with UID 'turma123' can get, update or delete the turma document with ID 'turma123'.
+     * @deny (create) User with UID 'otherUser' cannot create a new turma document with ID 'turma123'.
+     * @deny (get, update, delete) User with UID 'otherUser' cannot get, update or delete the turma document with ID 'turma123'.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     */
+    match /turmas/{turmaId} {
+      allow get: if isOwner(turmaId);
+      allow list: if isOwner(turmaId);
+      allow create: if isOwner(turmaId) && request.resource.data.id == turmaId;
+      allow update: if isExistingOwner(turmaId) && resource.data.id == turmaId;
+      allow delete: if isExistingOwner(turmaId);
+    }
+
+    /**
+     * @description Enforces owner-only access for the 'provas' collection.
+     * @path /databases/{database}/documents/provas/{provaId}
+     * @allow (create) User with UID 'prova123' can create a new prova document with ID 'prova123'.
+     * @allow (get, update, delete) User with UID 'prova123' can get, update or delete the prova document with ID 'prova123'.
+     * @deny (create) User with UID 'otherUser' cannot create a new prova document with ID 'prova123'.
+     * @deny (get, update, delete) User with UID 'otherUser' cannot get, update or delete the prova document with ID 'prova123'.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     */
+    match /provas/{provaId} {
+      allow get: if isOwner(provaId);
+      allow list: if isOwner(provaId);
+      allow create: if isOwner(provaId) && request.resource.data.id == provaId;
+      allow update: if isExistingOwner(provaId) && resource.data.id == provaId;
+      allow delete: if isExistingOwner(provaId);
+    }
+
+    /**
+     * @description Enforces owner-only access for the 'questoes' collection.
+     * @path /databases/{database}/documents/questoes/{questaoId}
+     * @allow (create) User with UID 'questao123' can create a new questao document with ID 'questao123'.
+     * @allow (get, update, delete) User with UID 'questao123' can get, update or delete the questao document with ID 'questao123'.
+     * @deny (create) User with UID 'otherUser' cannot create a new questao document with ID 'questao123'.
+     * @deny (get, update, delete) User with UID 'otherUser' cannot get, update or delete the questao document with ID 'questao123'.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     */
+    match /questoes/{questaoId} {
+      allow get: if isOwner(questaoId);
+      allow list: if isOwner(questaoId);
+      allow create: if isOwner(questaoId) && request.resource.data.id == questaoId;
+      allow update: if isExistingOwner(questaoId) && resource.data.id == questaoId;
+      allow delete: if isExistingOwner(questaoId);
+    }
+
+    /**
+     * @description Enforces owner-only access for the 'respostas_oficiais' collection.
+     * @path /databases/{database}/documents/respostas_oficiais/{respostaOficialId}
+     * @allow (create) User with UID 'respostaOficial123' can create a new respostaOficial document with ID 'respostaOficial123'.
+     * @allow (get, update, delete) User with UID 'respostaOficial123' can get, update or delete the respostaOficial document with ID 'respostaOficial123'.
+     * @deny (create) User with UID 'otherUser' cannot create a new respostaOficial document with ID 'respostaOficial123'.
+     * @deny (get, update, delete) User with UID 'otherUser' cannot get, update or delete the respostaOficial document with ID 'respostaOficial123'.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     */
+    match /respostas_oficiais/{respostaOficialId} {
+      allow get: if isOwner(respostaOficialId);
+      allow list: if isOwner(respostaOficialId);
+      allow create: if isOwner(respostaOficialId) && request.resource.data.id == respostaOficialId;
+      allow update: if isExistingOwner(respostaOficialId) && resource.data.id == respostaOficialId;
+      allow delete: if isExistingOwner(respostaOficialId);
+    }
+
+    /**
+     * @description Enforces owner-only access for the 'respostas_alunos' collection.
+     * @path /databases/{database}/documents/respostas_alunos/{respostaAlunoId}
+     * @allow (create) User with UID 'respostaAluno123' can create a new respostaAluno document with ID 'respostaAluno123'.
+     * @allow (get, update, delete) User with UID 'respostaAluno123' can get, update or delete the respostaAluno document with ID 'respostaAluno123'.
+     * @deny (create) User with UID 'otherUser' cannot create a new respostaAluno document with ID 'respostaAluno123'.
+     * @deny (get, update, delete) User with UID 'otherUser' cannot get, update or delete the respostaAluno document with ID 'respostaAluno123'.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     */
+    match /respostas_alunos/{respostaAlunoId} {
+      allow get: if isOwner(respostaAlunoId);
+      allow list: if isOwner(respostaAlunoId);
+      allow create: if isOwner(respostaAlunoId) && request.resource.data.id == respostaAlunoId;
+      allow update: if isExistingOwner(respostaAlunoId) && resource.data.id == respostaAlunoId;
+      allow delete: if isExistingOwner(respostaAlunoId);
+    }
+
+    /**
+     * @description Enforces owner-only access for the 'correcoes' collection.
+     * @path /databases/{database}/documents/correcoes/{correcaoId}
+     * @allow (create) User with UID 'correcao123' can create a new correcao document with ID 'correcao123'.
+     * @allow (get, update, delete) User with UID 'correcao123' can get, update or delete the correcao document with ID 'correcao123'.
+     * @deny (create) User with UID 'otherUser' cannot create a new correcao document with ID 'correcao123'.
+     * @deny (get, update, delete) User with UID 'otherUser' cannot get, update or delete the correcao document with ID 'correcao123'.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     */
+    match /correcoes/{correcaoId} {
+      allow get: if isOwner(correcaoId);
+      allow list: if isOwner(correcaoId);
+      allow create: if isOwner(correcaoId) && request.resource.data.id == correcaoId;
+      allow update: if isExistingOwner(correcaoId) && resource.data.id == correcaoId;
+      allow delete: if isExistingOwner(correcaoId);
+    }
+
+    /**
+     * @description Enforces owner-only access for the 'resultados' collection.
+     * @path /databases/{database}/documents/resultados/{resultadoId}
+     * @allow (create) User with UID 'resultado123' can create a new resultado document with ID 'resultado123'.
+     * @allow (get, update, delete) User with UID 'resultado123' can get, update or delete the resultado document with ID 'resultado123'.
+     * @deny (create) User with UID 'otherUser' cannot create a new resultado document with ID 'resultado123'.
+     * @deny (get, update, delete) User with UID 'otherUser' cannot get, update or delete the resultado document with ID 'resultado123'.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     */
+    match /resultados/{resultadoId} {
+      allow get: if isOwner(resultadoId);
+      allow list: if isOwner(resultadoId);
+      allow create: if isOwner(resultadoId) && request.resource.data.id == resultadoId;
+      allow update: if isExistingOwner(resultadoId) && resource.data.id == resultadoId;
+      allow delete: if isExistingOwner(resultadoId);
     }
   }
 }

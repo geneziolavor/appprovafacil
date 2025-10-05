@@ -2,8 +2,9 @@
 
 import React, { useMemo, type ReactNode, useEffect } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
-import { initializeFirebase, useAuth, useUser } from '@/firebase';
+import { initializeFirebase } from '@/firebase';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
+import { getAuth } from 'firebase/auth';
 
 
 interface FirebaseClientProviderProps {
@@ -20,7 +21,15 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
 
   useEffect(() => {
     if (auth) {
-      initiateAnonymousSignIn(auth);
+      // The onAuthStateChanged listener will handle the user state.
+      // We just need to ensure signInAnonymously is called if there's no user.
+      const unsubscribe = auth.onAuthStateChanged((user) => {
+        if (!user) {
+          initiateAnonymousSignIn(auth);
+        }
+      });
+      // Cleanup subscription on unmount
+      return () => unsubscribe();
     }
   }, [auth]);
 
