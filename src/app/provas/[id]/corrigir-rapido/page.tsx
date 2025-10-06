@@ -1,4 +1,4 @@
-''''use client';
+'use client';
 
 import { useState, useEffect, ChangeEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -264,4 +264,3 @@ export default function CorrigirRapidoPage() {
     </div>
   );
 }
-'''
