@@ -89,7 +89,7 @@ export default function CorrigirRapidoPage() {
       });
       
       setTimeout(() => {
-        const respostasDaIA = { '1': 'A', '2': 'B', '3': 'C', '4': 'D', '5': 'A' }; // Simulação
+        const respostasDaIA = { '1': 'A', '2': 'B', '3': 'C', '4': 'D', '5': 'A', '6': 'B', '7': 'C', '8': 'D', '9': 'A', '10': 'B' }; // Simulação Corrigida
         setRespostas(respostasDaIA);
         setIsProcessing(false);
       }, 3000);
