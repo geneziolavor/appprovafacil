@@ -1,8 +1,8 @@
 'use client';
-'use client';
 
-import { useMemoFirebase, useCollection, useDoc, useFirestore } from "@/firebase";
+import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
+import { useFirestore, useCollection, useDoc, useMemoFirebase } from "@/firebase";
 import { Header } from "@/components/header";
 import { PageHeader } from "@/components/page-header";
 import { BarChart2, CheckCircle2, XCircle } from "lucide-react";
@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ResultsChart } from "@/components/results-chart";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { collection, doc, query, where } from "firebase/firestore";
+import { collection, doc } from "firebase/firestore";
 import type { Aluno, Prova, Resultado } from "@/lib/types";
 
 export default function ResultadosPage() {
@@ -22,9 +22,14 @@ export default function ResultadosPage() {
   const provaDocRef = useMemoFirebase(() => doc(firestore, 'provas', provaId), [firestore, provaId]);
   const { data: prova, isLoading: isProvaLoading } = useDoc<Prova>(provaDocRef);
 
-  // Carrega os resultados da prova
-  const resultadosQuery = useMemoFirebase(() => query(collection(firestore, 'resultados'), where('provaId', '==', provaId)), [firestore, provaId]);
-  const { data: resultados, isLoading: areResultadosLoading } = useCollection<Resultado>(resultadosQuery);
+  // Carrega TODOS os resultados e filtra no cliente para maior robustez
+  const allResultadosQuery = useMemoFirebase(() => collection(firestore, 'resultados'), [firestore]);
+  const { data: allResultados, isLoading: areResultadosLoading } = useCollection<Resultado>(allResultadosQuery);
+  
+  const resultados = useMemo(() => {
+    if (!allResultados) return [];
+    return allResultados.filter(r => r.provaId === provaId);
+  }, [allResultados, provaId]);
   
   // Carrega todos os alunos para mapear o ID para o nome
   const alunosCollectionRef = useMemoFirebase(() => collection(firestore, 'alunos'), [firestore]);
@@ -36,9 +41,24 @@ export default function ResultadosPage() {
     return aluno ? aluno.nome : 'Aluno não encontrado';
   };
 
-  const isLoading = isProvaLoading || areResultadosLoading || areAlunosLoading;
+  const isLoading = isProvaLoading || areAlunosLoading;
 
-  if (isLoading) {
+  // Cálculos de métricas gerais
+  const totalAcertos = useMemo(() => resultados.reduce((sum, r) => sum + r.acertos, 0), [resultados]);
+  const totalErros = useMemo(() => resultados.reduce((sum, r) => sum + r.erros, 0), [resultados]);
+  const totalQuestoesRespondidas = totalAcertos + totalErros;
+  const mediaGeral = useMemo(() => {
+    if (resultados.length === 0) return 0;
+    const somaDasMedias = resultados.reduce((sum, r) => sum + r.media, 0);
+    return (somaDasMedias / resultados.length) * 10;
+  }, [resultados]);
+  
+  const chartData = useMemo(() => [
+    { name: 'Acertos', value: totalAcertos, fill: 'hsl(var(--chart-2))' },
+    { name: 'Erros', value: totalErros, fill: 'hsl(var(--chart-3))' },
+  ], [totalAcertos, totalErros]);
+
+  if (isLoading && resultados.length === 0) {
     return (
         <div className="flex min-h-screen w-full flex-col">
             <Header />
@@ -59,17 +79,6 @@ export default function ResultadosPage() {
       </div>
     );
   }
-  
-  // Cálculos com segurança e baseados nos dados corretos
-  const totalAcertos = resultados?.reduce((sum, r) => sum + (r.acertos || 0), 0) || 0;
-  const totalQuestoesRespondidas = (prova.numeroDeQuestoes || 0) * (resultados?.length || 0);
-  const totalErros = totalQuestoesRespondidas - totalAcertos;
-  const mediaGeral = (resultados && resultados.length > 0) ? (resultados.reduce((sum, r) => sum + (r.media || 0), 0) / resultados.length) * 10 : 0;
-  
-  const chartData = [
-    { name: 'Acertos', value: totalAcertos, fill: 'hsl(var(--chart-2))' },
-    { name: 'Erros', value: totalErros, fill: 'hsl(var(--chart-3))' },
-  ];
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -95,7 +104,7 @@ export default function ResultadosPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{totalAcertos}</div>
-                     <p className="text-xs text-muted-foreground">de {totalQuestoesRespondidas} questões respondidas</p>
+                     <p className="text-xs text-muted-foreground">de {totalQuestoesRespondidas} questões</p>
                 </CardContent>
             </Card>
              <Card>
@@ -105,7 +114,7 @@ export default function ResultadosPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{totalErros}</div>
-                    <p className="text-xs text-muted-foreground">de {totalQuestoesRespondidas} questões respondidas</p>
+                    <p className="text-xs text-muted-foreground">de {totalQuestoesRespondidas} questões</p>
                 </CardContent>
             </Card>
             <Card>
@@ -114,7 +123,7 @@ export default function ResultadosPage() {
                     <span className="text-muted-foreground">Nº</span>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{resultados?.length || 0}</div>
+                    <div className="text-2xl font-bold">{resultados.length}</div>
                     <p className="text-xs text-muted-foreground">Total de alunos que fizeram a prova</p>
                 </CardContent>
             </Card>
@@ -136,33 +145,39 @@ export default function ResultadosPage() {
                     <CardDescription>Desempenho individual dos alunos.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Aluno</TableHead>
-                                <TableHead>Acertos</TableHead>
-                                <TableHead>Erros</TableHead>
-                                <TableHead className="text-right">Média</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {resultados?.map(r => {
-                                const mediaAluno = (r.media || 0) * 10;
-                                return (
-                                    <TableRow key={r.id}>
-                                        <TableCell className="font-medium">{getAlunoNome(r.alunoId)}</TableCell>
-                                        <TableCell>{r.acertos}</TableCell>
-                                        <TableCell>{r.erros}</TableCell>
-                                        <TableCell className="text-right">
-                                            <Badge variant={mediaAluno >= 60 ? 'default' : 'destructive'}>
-                                                {mediaAluno.toFixed(1)}%
-                                            </Badge>
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
+                    {resultados.length > 0 ? (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Aluno</TableHead>
+                                    <TableHead>Acertos</TableHead>
+                                    <TableHead>Erros</TableHead>
+                                    <TableHead className="text-right">Média</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {resultados.map(r => {
+                                    const mediaAluno = r.media * 10;
+                                    return (
+                                        <TableRow key={r.id}>
+                                            <TableCell className="font-medium">{getAlunoNome(r.alunoId)}</TableCell>
+                                            <TableCell>{r.acertos}</TableCell>
+                                            <TableCell>{r.erros}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Badge variant={mediaAluno >= 60 ? 'default' : 'destructive'}>
+                                                    {mediaAluno.toFixed(1)}%
+                                                </Badge>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    ) : (
+                        <div className="text-center text-muted-foreground py-8">
+                            Nenhum resultado foi lançado para esta prova ainda.
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>

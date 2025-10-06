@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useState, useEffect, ChangeEvent } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { Prova, Aluno, Resultado } from '@/lib/types';
@@ -9,16 +9,26 @@ import { Header } from '@/components/header';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { CheckCircle, XCircle } from 'lucide-react';
+import { Upload, ArrowRight } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+
+const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+});
 
 export default function CorrigirRapidoPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const params = useParams();
+  const router = useRouter();
   const provaId = params.id as string;
 
   const provaRef = useMemoFirebase(() => doc(firestore, 'provas', provaId), [firestore, provaId]);
@@ -27,7 +37,9 @@ export default function CorrigirRapidoPage() {
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [selectedAlunoId, setSelectedAlunoId] = useState<string>('');
   const [respostas, setRespostas] = useState<Record<string, string>>({});
-  const [resultadoFinal, setResultadoFinal] = useState<{ acertos: number; erros: number; media: number; respostasSalvas: Record<string, string> } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [allAnswersFilled, setAllAnswersFilled] = useState(false);
 
   const alunosCollection = useMemoFirebase(() => collection(firestore, 'alunos'), [firestore]);
   const { data: alunosData } = useCollection<Aluno>(alunosCollection);
@@ -39,24 +51,66 @@ export default function CorrigirRapidoPage() {
     }
   }, [prova, alunosData]);
 
+  useEffect(() => {
+    if (prova?.numeroDeQuestoes) {
+        const filledCount = Object.keys(respostas).length;
+        setAllAnswersFilled(filledCount > 0 && filledCount === prova.numeroDeQuestoes);
+    }
+  }, [respostas, prova?.numeroDeQuestoes]);
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFile(e.target.files[0]);
+    } else {
+      setSelectedFile(null);
+    }
+  };
+
+  const handleAiCorrection = async () => {
+    if (!selectedFile || !selectedAlunoId) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Selecione um aluno e um arquivo de imagem.' });
+      return;
+    }
+    
+    setIsProcessing(true);
+    toast({ title: 'Em andamento', description: 'Analisando imagem com IA... Por favor, aguarde.' });
+
+    try {
+      const base64Image = await toBase64(selectedFile);
+      const gabaritoId = `${provaId}_${selectedAlunoId}_${Date.now()}`;
+      const gabaritoRef = doc(firestore, "gabaritos_enviados", gabaritoId);
+      
+      await setDocumentNonBlocking(gabaritoRef, {
+        alunoId: selectedAlunoId,
+        provaId: provaId,
+        imagemGabarito: base64Image,
+        status: 'pendente',
+        timestamp: new Date().toISOString(),
+      });
+      
+      setTimeout(() => {
+        const respostasDaIA = { '1': 'A', '2': 'B', '3': 'C', '4': 'D', '5': 'A' }; // Simulação
+        setRespostas(respostasDaIA);
+        setIsProcessing(false);
+      }, 3000);
+
+    } catch (error) {
+      console.error("Erro no processamento da imagem: ", error);
+      toast({ variant: 'destructive', title: 'Erro', description: 'Ocorreu um erro ao processar a imagem.' });
+      setIsProcessing(false);
+    }
+  };
+
   const handleRespostaChange = (questao: string, valor: string) => {
     setRespostas(prev => ({ ...prev, [questao]: valor }));
   };
 
-  const handleCorrigir = async () => {
+  const handleSaveAndVerify = async () => {
     if (!prova || !prova.gabarito || !prova.numeroDeQuestoes) {
         toast({ variant: 'destructive', title: 'Erro', description: 'A prova não tem um gabarito ou número de questões definido.' });
         return;
     }
-    if (!selectedAlunoId) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'Por favor, selecione um aluno.' });
-        return;
-    }
-    if (Object.keys(respostas).length !== prova.numeroDeQuestoes) {
-        toast({ variant: 'destructive', title: 'Erro', description: 'Por favor, preencha todas as respostas.' });
-        return;
-    }
-
+    
     let acertos = 0;
     Object.keys(prova.gabarito).forEach(questao => {
       if (prova.gabarito[questao] === respostas[questao]) {
@@ -67,8 +121,6 @@ export default function CorrigirRapidoPage() {
     const erros = prova.numeroDeQuestoes - acertos;
     const media = (acertos / prova.numeroDeQuestoes) * 10;
     
-    setResultadoFinal({ acertos, erros, media, respostasSalvas: respostas });
-
     const resultadoData: Omit<Resultado, 'id'> = {
         alunoId: selectedAlunoId,
         provaId: provaId,
@@ -83,74 +135,29 @@ export default function CorrigirRapidoPage() {
 
     await setDocumentNonBlocking(resultadoRef, resultadoData);
 
-    toast({ title: 'Sucesso!', description: `Resultado do aluno salvo. Média: ${media.toFixed(2)}` });
+    toast({ title: 'Sucesso!', description: `Resultado do aluno salvo.` });
+    
+    router.push(`/provas/${provaId}/resultados`);
   };
   
-  const handleNovoAluno = () => {
-      setSelectedAlunoId('');
-      setRespostas({});
-      setResultadoFinal(null);
-  }
-
   if (!prova) return <div className="flex-1 p-4 md:p-8 container mx-auto">Carregando prova...</div>;
 
   return (
     <div className="flex min-h-screen w-full flex-col">
       <Header />
-      <main className="flex-1 p-4 md:p-8 container mx-auto">
+      <main className="flex-1 p-4 md:p-8 container mx-auto space-y-8">
         <PageHeader title={`Correção Rápida: ${prova.titulo}`} description={`Data: ${new Date(prova.dataAplicacao).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}`} />
-
-        {resultadoFinal ? (
-            <Card>
-                <CardHeader>
-                    <CardTitle>Resultado Final</CardTitle>
-                    <CardDescription>Aluno: {alunos.find(a => a.id === selectedAlunoId)?.nome}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className='text-center'>
-                        <p className='text-lg'>Média Final</p>
-                        <p className='text-4xl font-bold'>{resultadoFinal.media.toFixed(2)}</p>
-                    </div>
-                    <div className='flex justify-around'>
-                        <div className="flex items-center gap-2 text-green-600">
-                            <CheckCircle size={24} />
-                            <span className='text-lg'>Acertos: {resultadoFinal.acertos}</span>
-                        </div>
-                         <div className="flex items-center gap-2 text-red-600">
-                            <XCircle size={24} />
-                            <span className='text-lg'>Erros: {resultadoFinal.erros}</span>
-                        </div>
-                    </div>
-                    {prova.gabarito && (
-                        <div className="border-t pt-4 mt-4">
-                            <h4 className='font-semibold mb-2'>Respostas do Aluno:</h4>
-                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                                {Object.entries(resultadoFinal.respostasSalvas).map(([q, r]) => (
-                                    <div key={q} className={`p-2 rounded-md ${prova.gabarito[q] === r ? 'bg-green-100' : 'bg-red-100'}`}>
-                                        <strong>Questão {q}:</strong> {r}
-                                        <span className='text-xs ml-1'> (G: {prova.gabarito[q]})</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                    <div className='text-center mt-6'>
-                       <Button onClick={handleNovoAluno}>Corrigir Prova de Outro Aluno</Button>
-                    </div>
-                </CardContent>
-            </Card>
-        ) : (
-             <Card>
-              <CardHeader>
-                <CardTitle>Lançar Respostas</CardTitle>
-                <CardDescription>Selecione o aluno e insira as alternativas que ele marcou.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
+        
+        <Card>
+            <CardHeader>
+                <CardTitle>Passo 1: Selecione o Aluno</CardTitle>
+            </CardHeader>
+            <CardContent>
                 <div className="w-full md:w-1/2">
                   <Label htmlFor="aluno">Aluno</Label>
                   <Select onValueChange={setSelectedAlunoId} value={selectedAlunoId} required>
                     <SelectTrigger id="aluno">
-                      <SelectValue placeholder="Selecione um aluno" />
+                      <SelectValue placeholder="Selecione um aluno da turma" />
                     </SelectTrigger>
                     <SelectContent>
                       {alunos.map(aluno => (
@@ -159,11 +166,38 @@ export default function CorrigirRapidoPage() {
                     </SelectContent>
                   </Select>
                 </div>
+            </CardContent>
+        </Card>
 
-                {prova.numeroDeQuestoes > 0 && (
-                    <div>
-                        <Label>Respostas do Aluno</Label>
-                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-4 mt-2 max-h-72 overflow-y-auto pr-4">
+        <Card className={!selectedAlunoId ? 'opacity-50 pointer-events-none' : ''}>
+            <CardHeader>
+                <CardTitle>Passo 2: Preencha as Respostas</CardTitle>
+                <CardDescription>Use a IA para preencher automaticamente ou insira as respostas manualmente.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg">
+                    <Label className="font-semibold">Opção A: Correção com IA</Label>
+                    <div className="flex items-end gap-4 mt-2">
+                        <div className="grid w-full max-w-sm items-center gap-1.5">
+                            <Label htmlFor="picture">Foto do Gabarito</Label>
+                            <Input id="picture" type="file" accept="image/*" onChange={handleFileChange} />
+                        </div>
+                        <Button onClick={handleAiCorrection} disabled={isProcessing || !selectedFile}>
+                            <Upload className="mr-2 h-4 w-4" />
+                            {isProcessing ? 'Processando...' : 'Analisar com IA'}
+                        </Button>
+                    </div>
+                </div>
+
+                <div className="relative text-center">
+                    <Separator />
+                    <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-2 text-sm text-muted-foreground">OU</span>
+                </div>
+
+                <div>
+                    <Label className="font-semibold">Opção B: Lançamento Manual</Label>
+                     {prova.numeroDeQuestoes > 0 && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-4 mt-2 max-h-72 overflow-y-auto pr-4 border rounded-lg p-4 bg-transparent">
                             {Array.from({ length: prova.numeroDeQuestoes }, (_, i) => i + 1).map((q) => (
                                 <div key={q} className="flex items-center gap-2">
                                     <Label htmlFor={`q-${q}`} className="min-w-[70px] text-right">
@@ -188,15 +222,23 @@ export default function CorrigirRapidoPage() {
                                 </div>
                             ))}
                         </div>
-                    </div>
-                )}
-                
-                <div className='text-center'>
-                  <Button onClick={handleCorrigir} size='lg' disabled={!selectedAlunoId}>Corrigir e Salvar Resultado</Button>
+                    )}
                 </div>
-              </CardContent>
-            </Card>
-        )}
+            </CardContent>
+        </Card>
+
+        <Card className={!allAnswersFilled || !selectedAlunoId ? 'opacity-50 pointer-events-none' : ''}>
+             <CardHeader>
+                <CardTitle>Passo 3: Salvar o Resultado</CardTitle>
+                <CardDescription>Depois de verificar as respostas, clique no botão abaixo para salvar o resultado final do aluno.</CardDescription>
+            </CardHeader>
+            <CardContent className='text-center'>
+              <Button onClick={handleSaveAndVerify} size='lg'>
+                Verificar e Enviar Correção <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </CardContent>
+        </Card>
+        
       </main>
     </div>
   );

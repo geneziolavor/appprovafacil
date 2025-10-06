@@ -1,8 +1,9 @@
 export const firebaseConfig = {
-  "projectId": "studio-5690450065-ca94e",
-  "appId": "1:207208901439:web:3f7bd3e8b9db09fbca418a",
-  "apiKey": "AIzaSyCEhYheIk_8kVHuH-Mx5aewwy2LvsQ0pxo",
-  "authDomain": "studio-5690450065-ca94e.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "207208901439"
+  "apiKey": "AIzaSyC5BKBz0t13GRX427_GgnM1HvAUri3QezM",
+  "authDomain": "appprovafacil.firebaseapp.com",
+  "projectId": "appprovafacil",
+  "storageBucket": "appprovafacil.appspot.com",
+  "messagingSenderId": "752916658665",
+  "appId": "1:752916658665:web:4f69c3d12c8f6430cf3378",
+  "measurementId": ""
 };
