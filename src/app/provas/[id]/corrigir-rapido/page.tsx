@@ -1,4 +1,4 @@
-'use client';
+''''use client';
 
 import { useState, useEffect, ChangeEvent } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -16,13 +16,8 @@ import { useToast } from '@/hooks/use-toast';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Upload, ArrowRight } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-
-const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = error => reject(error);
-});
+import { Progress } from '@/components/ui/progress';
+import Tesseract from 'tesseract.js';
 
 export default function CorrigirRapidoPage() {
   const firestore = useFirestore();
@@ -39,6 +34,7 @@ export default function CorrigirRapidoPage() {
   const [respostas, setRespostas] = useState<Record<string, string>>({});
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [allAnswersFilled, setAllAnswersFilled] = useState(false);
 
   const alunosCollection = useMemoFirebase(() => collection(firestore, 'alunos'), [firestore]);
@@ -73,31 +69,50 @@ export default function CorrigirRapidoPage() {
     }
     
     setIsProcessing(true);
-    toast({ title: 'Em andamento', description: 'Analisando imagem com IA... Por favor, aguarde.' });
+    setProgress(0);
+    toast({ title: 'Iniciando análise...', description: 'A IA começou a processar a imagem. Isso pode levar um minuto.' });
 
     try {
-      const base64Image = await toBase64(selectedFile);
-      const gabaritoId = `${provaId}_${selectedAlunoId}_${Date.now()}`;
-      const gabaritoRef = doc(firestore, "gabaritos_enviados", gabaritoId);
-      
-      await setDocumentNonBlocking(gabaritoRef, {
-        alunoId: selectedAlunoId,
-        provaId: provaId,
-        imagemGabarito: base64Image,
-        status: 'pendente',
-        timestamp: new Date().toISOString(),
-      });
-      
-      setTimeout(() => {
-        const respostasDaIA = { '1': 'A', '2': 'B', '3': 'C', '4': 'D', '5': 'A', '6': 'B', '7': 'C', '8': 'D', '9': 'A', '10': 'B' }; // Simulação Corrigida
-        setRespostas(respostasDaIA);
-        setIsProcessing(false);
-      }, 3000);
+        const result = await Tesseract.recognize(
+            selectedFile,
+            'por', // Língua: Português
+            {
+                logger: m => {
+                    if (m.status === 'recognizing text') {
+                        setProgress(Math.round(m.progress * 100));
+                    }
+                }
+            }
+        );
+
+        toast({ title: 'Extração de texto concluída!', description: 'Analisando e preenchendo as respostas.' });
+
+        const newRespostas: Record<string, string> = {};
+        const lines = result.data.text.split('\n');
+        const answerRegex = /^\s*(\d+)\s*[-.)]*\s*([A-D])\s*$/i;
+
+        lines.forEach(line => {
+            const match = line.match(answerRegex);
+            if (match) {
+                const questao = match[1];
+                const resposta = match[2].toUpperCase();
+                newRespostas[questao] = resposta;
+            }
+        });
+
+        if (Object.keys(newRespostas).length === 0) {
+             toast({ variant: 'destructive', title: 'Nenhuma resposta encontrada', description: 'A IA não conseguiu identificar respostas no formato esperado (ex: 1. A). Tente uma imagem com melhor qualidade ou insira manualmente.' });
+        } else {
+            setRespostas(prev => ({...prev, ...newRespostas}));
+            toast({ title: 'Respostas preenchidas!', description: `A IA encontrou ${Object.keys(newRespostas).length} respostas. Por favor, verifique antes de salvar.` });
+        }
 
     } catch (error) {
-      console.error("Erro no processamento da imagem: ", error);
-      toast({ variant: 'destructive', title: 'Erro', description: 'Ocorreu um erro ao processar a imagem.' });
+      console.error("Erro no processamento da imagem com Tesseract: ", error);
+      toast({ variant: 'destructive', title: 'Erro na IA', description: 'Ocorreu um erro inesperado durante a análise da imagem.' });
+    } finally {
       setIsProcessing(false);
+      setProgress(0);
     }
   };
 
@@ -184,9 +199,15 @@ export default function CorrigirRapidoPage() {
                         </div>
                         <Button onClick={handleAiCorrection} disabled={isProcessing || !selectedFile}>
                             <Upload className="mr-2 h-4 w-4" />
-                            {isProcessing ? 'Processando...' : 'Analisar com IA'}
+                            {isProcessing ? 'Analisando...' : 'Analisar com IA'}
                         </Button>
                     </div>
+                    {isProcessing && (
+                        <div className='mt-4'>
+                            <Progress value={progress} className="w-full" />
+                            <p className='text-sm text-center mt-1 text-muted-foreground'>Progresso da análise: {progress}%</p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="relative text-center">
@@ -243,3 +264,4 @@ export default function CorrigirRapidoPage() {
     </div>
   );
 }
+'''
