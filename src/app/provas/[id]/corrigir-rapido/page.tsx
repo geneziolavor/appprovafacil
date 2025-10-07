@@ -16,7 +16,6 @@ import { useToast } from '@/hooks/use-toast';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Upload, ArrowRight } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { createWorker } from 'tesseract.js';
 
 export default function CorrigirRapidoPage() {
   const firestore = useFirestore();
@@ -69,9 +68,10 @@ export default function CorrigirRapidoPage() {
     setIsProcessing(true);
     toast({ title: 'Análise em progresso...', description: 'A IA está analisando a imagem. Isso pode levar um minuto.' });
 
-    let worker: Tesseract.Worker | undefined;
+    let worker: import('tesseract.js').Worker | undefined;
 
     try {
+      const { createWorker } = await import('tesseract.js');
       worker = await createWorker();
       await worker.loadLanguage('por');
       await worker.initialize('por');
@@ -215,7 +215,7 @@ export default function CorrigirRapidoPage() {
                                     <Select
                                         name={`resposta-${q}`}
                                         value={respostas[q] || ''}
-                                        onValueChange={(value) => handleRespostaChange(q.toString(), value)}
+                                        onValuege={(value) => handleRespostaChange(q.toString(), value)}
                                         required
                                     >
                                         <SelectTrigger>
