@@ -73,23 +73,23 @@ export default function CorrigirRapidoPage() {
     toast({ title: 'Iniciando análise...', description: 'A IA começou a processar a imagem. Isso pode levar um minuto.' });
 
     try {
-        const result = await Tesseract.recognize(
-            selectedFile,
-            'por', // Língua: Português
-            {
-                logger: m => {
-                    if (m.status === 'recognizing text') {
-                        setProgress(Math.round(m.progress * 100));
-                    }
+        const worker = await Tesseract.createWorker('por');
+        await worker.setParameters({
+            tessedit_char_whitelist: '0123456789-ABCDE',
+        });
+        const result = await worker.recognize(selectedFile, { 
+            logger: m => {
+                if (m.status === 'recognizing text') {
+                    setProgress(Math.round(m.progress * 100));
                 }
             }
-        );
+        });
 
         toast({ title: 'Extração de texto concluída!', description: 'Analisando e preenchendo as respostas.' });
 
         const newRespostas: Record<string, string> = {};
         const lines = result.data.text.split('\n');
-        const answerRegex = /^\s*(\d+)\s*[-.)]*\s*([A-D])\s*$/i;
+        const answerRegex = /^\s*(\d+)\s*[-.)]*\s*([A-E])\s*$/i;
 
         lines.forEach(line => {
             const match = line.match(answerRegex);
@@ -106,6 +106,8 @@ export default function CorrigirRapidoPage() {
             setRespostas(prev => ({...prev, ...newRespostas}));
             toast({ title: 'Respostas preenchidas!', description: `A IA encontrou ${Object.keys(newRespostas).length} respostas. Por favor, verifique antes de salvar.` });
         }
+
+        await worker.terminate();
 
     } catch (error) {
       console.error("Erro no processamento da imagem com Tesseract: ", error);
@@ -238,6 +240,7 @@ export default function CorrigirRapidoPage() {
                                             <SelectItem value="B">B</SelectItem>
                                             <SelectItem value="C">C</SelectItem>
                                             <SelectItem value="D">D</SelectItem>
+                                            <SelectItem value="E">E</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
