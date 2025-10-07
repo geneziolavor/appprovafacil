@@ -16,8 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Upload, ArrowRight } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { Progress } from '@/components/ui/progress';
-import Tesseract from 'tesseract.js';
+import { createWorker } from 'tesseract.js';
 
 export default function CorrigirRapidoPage() {
   const firestore = useFirestore();
@@ -34,7 +33,6 @@ export default function CorrigirRapidoPage() {
   const [respostas, setRespostas] = useState<Record<string, string>>({});
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [allAnswersFilled, setAllAnswersFilled] = useState(false);
 
   const alunosCollection = useMemoFirebase(() => collection(firestore, 'alunos'), [firestore]);
@@ -67,54 +65,48 @@ export default function CorrigirRapidoPage() {
       toast({ variant: 'destructive', title: 'Erro', description: 'Selecione um aluno e um arquivo de imagem.' });
       return;
     }
-    
+
     setIsProcessing(true);
-    setProgress(0);
-    toast({ title: 'Iniciando análise...', description: 'A IA começou a processar a imagem. Isso pode levar um minuto.' });
+    toast({ title: 'Análise em progresso...', description: 'A IA está analisando a imagem. Isso pode levar um minuto.' });
+
+    let worker: Tesseract.Worker | undefined;
 
     try {
-        const worker = await Tesseract.createWorker('por');
-        await worker.setParameters({
-            tessedit_char_whitelist: '0123456789-ABCDE',
-        });
-        const result = await worker.recognize(selectedFile, { 
-            logger: m => {
-                if (m.status === 'recognizing text') {
-                    setProgress(Math.round(m.progress * 100));
-                }
-            }
-        });
+      worker = await createWorker();
+      await worker.loadLanguage('por');
+      await worker.initialize('por');
+      await worker.setParameters({
+        tessedit_char_whitelist: '0123456789-ABCDE',
+      });
 
-        toast({ title: 'Extração de texto concluída!', description: 'Analisando e preenchendo as respostas.' });
+      const { data: { text } } = await worker.recognize(selectedFile);
+      
+      const newRespostas: Record<string, string> = {};
+      const lines = text.split('\n');
+      const answerRegex = /^\s*(\d+)\s*[-.)]*\s*([A-E])\s*$/i;
 
-        const newRespostas: Record<string, string> = {};
-        const lines = result.data.text.split('\n');
-        const answerRegex = /^\s*(\d+)\s*[-.)]*\s*([A-E])\s*$/i;
-
-        lines.forEach(line => {
-            const match = line.match(answerRegex);
-            if (match) {
-                const questao = match[1];
-                const resposta = match[2].toUpperCase();
-                newRespostas[questao] = resposta;
-            }
-        });
-
-        if (Object.keys(newRespostas).length === 0) {
-             toast({ variant: 'destructive', title: 'Nenhuma resposta encontrada', description: 'A IA não conseguiu identificar respostas no formato esperado (ex: 1. A). Tente uma imagem com melhor qualidade ou insira manualmente.' });
-        } else {
-            setRespostas(prev => ({...prev, ...newRespostas}));
-            toast({ title: 'Respostas preenchidas!', description: `A IA encontrou ${Object.keys(newRespostas).length} respostas. Por favor, verifique antes de salvar.` });
+      lines.forEach(line => {
+        const match = line.match(answerRegex);
+        if (match) {
+          const questao = match[1];
+          const resposta = match[2].toUpperCase();
+          newRespostas[questao] = resposta;
         }
+      });
 
-        await worker.terminate();
+      if (Object.keys(newRespostas).length === 0) {
+        toast({ variant: 'destructive', title: 'Nenhuma resposta encontrada', description: 'A IA não conseguiu identificar respostas no formato esperado (ex: 1. A). Tente uma imagem com melhor qualidade ou insira manualmente.' });
+      } else {
+        setRespostas(prev => ({ ...prev, ...newRespostas }));
+        toast({ title: 'Respostas preenchidas!', description: `A IA encontrou ${Object.keys(newRespostas).length} respostas. Por favor, verifique antes de salvar.` });
+      }
 
     } catch (error) {
       console.error("Erro no processamento da imagem com Tesseract: ", error);
-      toast({ variant: 'destructive', title: 'Erro na IA', description: 'Ocorreu um erro inesperado durante a análise da imagem.' });
+      toast({ variant: 'destructive', title: 'Erro na IA', description: 'Ocorreu um erro inesperado durante a análise da imagem. Verifique sua conexão ou tente novamente.' });
     } finally {
+      await worker?.terminate();
       setIsProcessing(false);
-      setProgress(0);
     }
   };
 
@@ -204,12 +196,6 @@ export default function CorrigirRapidoPage() {
                             {isProcessing ? 'Analisando...' : 'Analisar com IA'}
                         </Button>
                     </div>
-                    {isProcessing && (
-                        <div className='mt-4'>
-                            <Progress value={progress} className="w-full" />
-                            <p className='text-sm text-center mt-1 text-muted-foreground'>Progresso da análise: {progress}%</p>
-                        </div>
-                    )}
                 </div>
 
                 <div className="relative text-center">
