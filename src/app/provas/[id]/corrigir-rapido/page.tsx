@@ -72,9 +72,8 @@ export default function CorrigirRapidoPage() {
 
     try {
       const { createWorker } = await import('tesseract.js');
-      worker = await createWorker();
-      await worker.loadLanguage('por');
-      await worker.initialize('por');
+      // A inicialização agora é feita em um único passo
+      worker = await createWorker('por'); 
       await worker.setParameters({
         tessedit_char_whitelist: '0123456789-ABCDE',
       });
@@ -215,7 +214,7 @@ export default function CorrigirRapidoPage() {
                                     <Select
                                         name={`resposta-${q}`}
                                         value={respostas[q] || ''}
-                                        onValuege={(value) => handleRespostaChange(q.toString(), value)}
+                                        onValueChange={(value) => handleRespostaChange(q.toString(), value)}
                                         required
                                     >
                                         <SelectTrigger>
