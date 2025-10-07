@@ -75,7 +75,7 @@ export default function CorrigirRapidoPage() {
       worker = await createWorker('por'); 
       await worker.setParameters({
         tessedit_char_whitelist: '0123456789-ABCDE',
-        tessedit_pageseg_mode: 6, // PSM_SINGLE_BLOCK
+        tessedit_pageseg_mode: 3, // PSM_AUTO
       });
 
       const { data: { text } } = await worker.recognize(selectedFile);
