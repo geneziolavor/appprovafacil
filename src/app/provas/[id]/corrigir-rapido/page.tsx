@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Upload, ArrowRight } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { PageSegMode } from 'tesseract.js';
 
 export default function CorrigirRapidoPage() {
   const firestore = useFirestore();
@@ -72,10 +73,10 @@ export default function CorrigirRapidoPage() {
 
     try {
       const { createWorker } = await import('tesseract.js');
-      // A inicialização agora é feita em um único passo
       worker = await createWorker('por'); 
       await worker.setParameters({
         tessedit_char_whitelist: '0123456789-ABCDE',
+        tessedit_pageseg_mode: PageSegMode.PSM_SINGLE_BLOCK,
       });
 
       const { data: { text } } = await worker.recognize(selectedFile);
