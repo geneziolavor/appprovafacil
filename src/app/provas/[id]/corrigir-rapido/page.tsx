@@ -80,6 +80,11 @@ export default function CorrigirRapidoPage() {
 
       const { data: { text } } = await worker.recognize(selectedFile);
       
+      // DEBUG: Log the raw text extracted by the OCR
+      console.log("--- INÍCIO DO TEXTO EXTRAÍDO PELA IA ---");
+      console.log(text);
+      console.log("--- FIM DO TEXTO EXTRAÍDO PELA IA ---");
+
       const newRespostas: Record<string, string> = {};
       const lines = text.split('\n');
       const answerRegex = /^\s*(\d+)\s*[-.)]*\s*([A-E])\s*$/i;
