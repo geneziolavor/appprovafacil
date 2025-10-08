@@ -80,26 +80,18 @@ export default function CorrigirRapidoPage() {
 
       const { data: { text } } = await worker.recognize(selectedFile);
       
-      // DEBUG: Log the raw text extracted by the OCR
-      console.log("--- INÍCIO DO TEXTO EXTRAÍDO PELA IA ---");
-      console.log(text);
-      console.log("--- FIM DO TEXTO EXTRAÍDO PELA IA ---");
-
       const newRespostas: Record<string, string> = {};
-      const lines = text.split('\n');
-      const answerRegex = /^\s*(\d+)\s*[-.)]*\s*([A-E])\s*$/i;
-
-      lines.forEach(line => {
-        const match = line.match(answerRegex);
-        if (match) {
-          const questao = match[1];
-          const resposta = match[2].toUpperCase();
-          newRespostas[questao] = resposta;
-        }
-      });
+      // NEW ROBUST LOGIC: Find all number-letter pairs in the entire text block, regardless of newlines or other characters.
+      const answerRegex = /(\d+)\s*[-.)]*\s*([A-E])/g;
+      let match;
+      while ((match = answerRegex.exec(text)) !== null) {
+        const questao = match[1];
+        const resposta = match[2].toUpperCase();
+        newRespostas[questao] = resposta;
+      }
 
       if (Object.keys(newRespostas).length === 0) {
-        toast({ variant: 'destructive', title: 'Nenhuma resposta encontrada', description: 'A IA não conseguiu identificar respostas no formato esperado (ex: 1. A). Tente uma imagem com melhor qualidade ou insira manualmente.' });
+        toast({ variant: 'destructive', title: 'Nenhuma resposta encontrada', description: 'A IA não conseguiu identificar respostas no formato esperado (ex: 1-A). Tente uma imagem com melhor qualidade ou insira manualmente.' });
       } else {
         setRespostas(prev => ({ ...prev, ...newRespostas }));
         toast({ title: 'Respostas preenchidas!', description: `A IA encontrou ${Object.keys(newRespostas).length} respostas. Por favor, verifique antes de salvar.` });
