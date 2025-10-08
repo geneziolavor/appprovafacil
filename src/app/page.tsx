@@ -47,10 +47,10 @@ export default function DashboardPage() {
             <div className="bg-card p-8 rounded-2xl mb-8 shadow-sm">
                 <div className="text-center">
                     <h1 className="text-4xl md:text-5xl font-bold font-headline text-foreground">
-                        Bem-vindo ao ProvaFácil
+                        EEB PROFESSOR PEDRO TEIXEIRA BARROSO
                     </h1>
                     <p className="text-lg text-muted-foreground mt-2">
-                        Seu assistente inteligente para correção de avaliações.
+                        SISTEMA DE CORREÇÃO COM IA PARA AS TURMAS DE 7 ANO C E 6 ANO F, E CORREÇÃO DE PROVAS.
                     </p>
                 </div>
             </div>
@@ -76,6 +76,9 @@ export default function DashboardPage() {
             </div>
         </div>
       </main>
+      <footer className="p-4 text-center text-xs text-muted-foreground">
+        ITA TECNOLOGIA EDUCACIONAL. DESENVOLVIMENTO PROFESSOR GENEZIO DE LAVOR TODOS DIREITOS RESERVADOS
+      </footer>
     </div>
   );
 }
