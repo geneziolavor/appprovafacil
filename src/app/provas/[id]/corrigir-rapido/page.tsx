@@ -64,6 +64,10 @@ export default function CorrigirRapidoPage() {
       toast({ variant: 'destructive', title: 'Erro', description: 'Selecione um aluno e um arquivo de imagem.' });
       return;
     }
+    if (!prova) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Dados da prova ainda não foram carregados.' });
+      return;
+    }
 
     setIsProcessing(true);
     toast({ title: 'Análise em progresso...', description: 'A IA está analisando a imagem. Isso pode levar um minuto.' });
@@ -81,13 +85,17 @@ export default function CorrigirRapidoPage() {
       const { data: { text } } = await worker.recognize(selectedFile);
       
       const newRespostas: Record<string, string> = {};
-      // NEW ROBUST LOGIC: Find all number-letter pairs in the entire text block, regardless of newlines or other characters.
       const answerRegex = /(\d+)\s*[-.)]*\s*([A-E])/g;
       let match;
+
       while ((match = answerRegex.exec(text)) !== null) {
-        const questao = match[1];
+        const questaoNum = parseInt(match[1], 10);
         const resposta = match[2].toUpperCase();
-        newRespostas[questao] = resposta;
+        
+        // FINAL VALIDATION: Only accept answers for questions that exist in the test.
+        if (questaoNum > 0 && questaoNum <= prova.numeroDeQuestoes) {
+          newRespostas[questaoNum.toString()] = resposta;
+        }
       }
 
       if (Object.keys(newRespostas).length === 0) {
